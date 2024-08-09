@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="Hexo Theme Redefine">
+    
+    <meta name="author" content="0rb1t">
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="http://example.com/2024/08/09/kernelpwn之堆利用-userfaultfd-msg消息队列-pipebuffer/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+        <meta name="description" content="​">
+<meta property="og:type" content="article">
+<meta property="og:title" content="KernelPwn之堆利用(userfaultfd+msg消息队列+pipebuffer)">
+<meta property="og:url" content="http://example.com/2024/08/09/KernelPwn%E4%B9%8B%E5%A0%86%E5%88%A9%E7%94%A8-userfaultfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="​">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2024/08/03/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97-Hexo-Git%E8%BF%9C%E7%A8%8B%E9%83%A8%E7%BD%B2/tfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/1.png">
+<meta property="og:image" content="http://example.com/2024/08/03/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97-Hexo-Git%E8%BF%9C%E7%A8%8B%E9%83%A8%E7%BD%B2/tfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/2.png">
+<meta property="og:image" content="http://example.com/2024/08/03/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97-Hexo-Git%E8%BF%9C%E7%A8%8B%E9%83%A8%E7%BD%B2/tfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/3.png">
+<meta property="article:published_time" content="2024-08-09T05:19:16.000Z">
+<meta property="article:modified_time" content="2024-08-09T11:08:11.777Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="KernelPwn">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/08/03/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97-Hexo-Git%E8%BF%9C%E7%A8%8B%E9%83%A8%E7%BD%B2/tfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/1.png">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            KernelPwn之堆利用(userfaultfd+msg消息队列+pipebuffer) -
+        
+        0rb1t&#39;s Blog
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/assets/build/styles.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+
+    
+        
+<script src="/js/libs/anime.min.js"></script>
+
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"example.com","root":"/","language":"en"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":true,"open_graph":true,"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Welcome to my blog.","subtitle":{"text":[],"hitokoto":{"enable":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":false,"style":"default","links":{"github":null,"instagram":null,"zhihu":null,"twitter":null,"email":null},"qrs":{"weixin":null}}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"9.3.0"}},"version":"2.6.4","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"blur"},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":null},"article_date_format":"auto","categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footerStart":"2024/8/4 00:00:00"};
+    window.lang_ago = {"second":"%s seconds ago","minute":"%s minutes ago","hour":"%s hours ago","day":"%s days ago","week":"%s weeks ago","month":"%s months ago","year":"%s years ago"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+<div class="progress-bar-container">
+    
+
+    
+        <span class="pjax-progress-bar"></span>
+<!--        <span class="swup-progress-icon">-->
+<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+<!--        </span>-->
+    
+</div>
+
+
+
+    <style>
+    :root {
+        --preloader-background-color: #fff;
+        --preloader-text-color: #000;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --preloader-background-color: #202124;
+            --preloader-text-color: #fff;
+        }
+    }
+
+    @media (prefers-color-scheme: light) {
+        :root {
+            --preloader-background-color: #fff;
+            --preloader-text-color: #000;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .ml13 {
+            font-size: 2.6rem !important; /* Adjust this value as needed */
+        }
+    }
+
+    .preloader {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem; /* Tailwind 'gap-4' is 1rem */
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        padding: 12px;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh; /* 'h-screen' is 100% of the viewport height */
+        background-color: var(--preloader-background-color);
+        z-index: 1100; /* 'z-[1100]' sets the z-index */
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .ml13 {
+        font-size: 3.2rem;
+        /* text-transform: uppercase; */
+        color: var(--preloader-text-color);
+        letter-spacing: -1px;
+        font-weight: 500;
+        font-family: 'Chillax-Variable', sans-serif;
+        text-align: center;
+    }
+
+    .ml13 .word {
+        display: inline-flex;
+        flex-wrap: wrap;
+        white-space: nowrap;
+    }
+
+    .ml13 .letter {
+        display: inline-block;
+        line-height: 1em;
+    }
+</style>
+
+<div class="preloader">
+    <h2 class="ml13">
+        0rb1t&#39;s Blog
+    </h2>
+    <script>
+        var textWrapper = document.querySelector('.ml13');
+        // Split text into words
+        var words = textWrapper.textContent.trim().split(' ');
+
+        // Clear the existing content
+        textWrapper.innerHTML = '';
+
+        // Wrap each word and its letters in spans
+        words.forEach(function(word) {
+            var wordSpan = document.createElement('span');
+            wordSpan.classList.add('word');
+            wordSpan.innerHTML = word.replace(/\S/g, "<span class='letter'>$&</span>");
+            textWrapper.appendChild(wordSpan);
+            textWrapper.appendChild(document.createTextNode(' ')); // Add space between words
+        });
+
+        var animation = anime.timeline({loop: true})
+            .add({
+                targets: '.ml13 .letter',
+                translateY: [40,0],
+                translateZ: 0,
+                opacity: [0,1],
+                filter: ['blur(5px)', 'blur(0px)'], // Starting from blurred to unblurred
+                easing: "easeOutExpo",
+                duration: 1400,
+                delay: (el, i) => 300 + 30 * i,
+            }).add({
+                targets: '.ml13 .letter',
+                translateY: [0,-40],
+                opacity: [1,0],
+                filter: ['blur(0px)', 'blur(5px)'], // Ending from unblurred to blurred
+                easing: "easeInExpo",
+                duration: 1200,
+                delay: (el, i) => 100 + 30 * i,
+                complete: function() {
+                    hidePreloader(); // Call hidePreloader after the animation completes
+                }
+            });
+
+        let themeStatus = JSON.parse(localStorage.getItem('REDEFINE-THEME-STATUS'))?.isDark;
+
+        // If the theme status is not found in local storage, check the preferred color scheme
+        if (themeStatus === undefined || themeStatus === null) {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                themeStatus = 'dark';
+            } else {
+                themeStatus = 'light';
+            }
+        }
+
+        // Now you can use the themeStatus variable in your code
+        if (themeStatus) {
+            document.documentElement.style.setProperty('--preloader-background-color', '#202124');
+            document.documentElement.style.setProperty('--preloader-text-color', '#fff');
+        } else {
+            document.documentElement.style.setProperty('--preloader-background-color', '#fff');
+            document.documentElement.style.setProperty('--preloader-text-color', '#000');
+        }
+
+        window.addEventListener('load', function () {
+            setTimeout(hidePreloader, 5000); // Call hidePreloader after 5000 milliseconds if not already called by animation
+        });
+
+        function hidePreloader() {
+            var preloader = document.querySelector('.preloader');
+            preloader.style.opacity = '0';
+            setTimeout(function () {
+                preloader.style.display = 'none';
+            }, 200);
+        }
+    </script>
+</div>
+
+<main class="page-container" id="swup">
+
+    
+
+    <div class="main-content-container">
+
+
+        <div class="main-content-header">
+            <header class="navbar-container px-6 md:px-12">
+
+    <div class="navbar-content ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                0rb1t&#39;s Blog
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    HOME
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-screen w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                HOME
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">2</div>
+        <div class="label text-third-text-color text-sm">Tags</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">2</div>
+        <div class="label text-third-text-color text-sm">Categories</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">3</div>
+        <div class="label text-third-text-color text-sm">Posts</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+        </div>
+
+        <div class="main-content-body">
+
+            
+
+            <div class="main-content">
+
+                
+                    <div class="post-page-container flex relative justify-between box-border w-full h-full">
+    <div class="article-content-container">
+
+        <div class="article-title relative w-full">
+            
+                <div class="w-full flex items-center pt-6 justify-start">
+                    <h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">KernelPwn之堆利用(userfaultfd+msg消息队列+pipebuffer)</h1>
+                </div>
+            
+            </div>
+
+        
+            <div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+                <div class="avatar w-[46px] h-[46px] flex-shrink-0 rounded-medium border border-border-color p-[1px]">
+                    <img src="/images/redefine-avatar.svg">
+                </div>
+                <div class="info flex flex-col justify-between">
+                    <div class="author flex items-center">
+                        <span class="name text-default-text-color text-lg font-semibold">0rb1t</span>
+                        
+                            <span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv1</span>
+                        
+                    </div>
+                    <div class="meta-info">
+                        <div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2024-08-09 13:19:16</span>
+        <span class="mobile">2024-08-09 13:19:16</span>
+        <span class="hover-info">Created</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2024-08-09 19:08:11</span>
+            <span class="mobile">2024-08-09 19:08:11</span>
+            <span class="hover-info">Updated</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Pwn/">Pwn</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/KernelPwn/">KernelPwn</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+                    </div>
+                </div>
+            </div>
+        
+
+        
+
+
+        <div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+            <p>​                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           </p>
+<h2 id="前置知识"><a href="#前置知识" class="headerlink" title="前置知识"></a>前置知识</h2><ul>
+<li>UAF</li>
+<li>内核堆分配（部分了解）</li>
+<li>内存映射</li>
+</ul>
+<p>以下分析使用的都是linux-5.9.10的源码。</p>
+<h2 id="Userfaultfd机制"><a href="#Userfaultfd机制" class="headerlink" title="Userfaultfd机制"></a>Userfaultfd机制</h2><p>进程在访问内存时，并不会直接访问物理内存，而是访问物理内存映射的虚拟内存，然后通过MMU查找虚拟内存对应的物理内存。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/08/03/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97-Hexo-Git%E8%BF%9C%E7%A8%8B%E9%83%A8%E7%BD%B2/tfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/1.png"
+                      alt="选自csdn"
+                ></p>
+<p>MMU通过段表和页表查询虚拟地址对应的物理地址，从而返回数据或者修改数据。</p>
+<p>当访问到一块未映射的虚拟内存时，MMU查询没有找到对应的物理内存就会触发缺页异常。</p>
+<p>一般系统会自动调用异常处理函数来处理异常，但用户进程可以为自己的虚拟地址设置缺页异常处理函数。</p>
+<p>通过调用<code>SYS_userfaultfd</code>可以创建文件标识符<code>uffd</code>，再通过<code>ioctl</code>控制命令<code>UFFDIO_API</code>请求验证版本号和启用某些特性，如果内核userfaultfd的版本号是请求的版本号，并且支持请求启用的所有特性，那么成功启用userfaultfd，返回内核支持的所有特性和控制命令。</p>
+<p>最后通过<code>uffdio_register</code>控制命令注册虚拟内存范围，跟踪指定虚拟地址范围的页错误异常。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">uffdio_api</span> &#123;</span></span><br><span class="line">    __u64 api;</span><br><span class="line">    __u64 features;<span class="comment">//启用特性</span></span><br><span class="line">    __u64 ioctls;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">uffdio_register</span> &#123;</span></span><br><span class="line">     <span class="class"><span class="keyword">struct</span> <span class="title">uffdio_range</span> <span class="title">range</span>;</span><span class="comment">//虚拟地址检测范围</span></span><br><span class="line">     __u64 mode;<span class="comment">//指定页错误异常</span></span><br><span class="line">     __u64 ioctls;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">RegisterUserfault</span><span class="params">(<span class="type">void</span>* start, <span class="type">int</span> len, <span class="type">void</span>* handler)</span> &#123;</span><br><span class="line">    <span class="type">int</span> uffd = syscall(__NR_userfaultfd, O_CLOEXEC | O_NONBLOCK);</span><br><span class="line">    uffdio_register ur = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    uffdio_api ua = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    ur.range.start = (ULL)start;</span><br><span class="line">    ur.range.len = len;</span><br><span class="line">    ur.mode = UFFDIO_REGISTER_MODE_MISSING;</span><br><span class="line">    ua.api = UFFD_API;</span><br><span class="line">    ua.features = <span class="number">0</span>;<span class="comment">//启用默认特性</span></span><br><span class="line">    <span class="keyword">if</span> (ioctl(uffd, UFFDIO_API, &amp;ua) == <span class="number">-1</span>)</span><br><span class="line">        ErrExit(<span class="string">&quot;[-] ioctl-UFFDIO_API&quot;</span>);</span><br><span class="line">    ioctl(uffd, UFFDIO_REGISTER, &amp;ur);<span class="comment">//注册虚拟地址</span></span><br><span class="line">    <span class="type">pthread_t</span> pt;</span><br><span class="line">    pthread_create(&amp;pt, <span class="literal">NULL</span>, (<span class="type">void</span>* (*)(<span class="type">void</span>*))handler, (<span class="type">void</span>*)uffd);<span class="comment">//启动异常接收处理函数</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>如果访问注册的虚拟地址范围并产生页错误异常，<code>uffd</code>文件便会转为可读，并存放事件消息，此时原线程会卡住等待<code>handler</code>函数回复。</p>
+<p><code>handler</code>函数则需要通过<code>select</code>或者<code>poll</code>监听文件可读，接收事件消息，其中事件有以下几种类型</p>
+<ol>
+<li><code>UFFD_EVENT_PAGEFAULT</code>：页错误异常。</li>
+<li><code>UFFD_EVENT_FORK</code>：fork调用。</li>
+<li><code>UFFD_EVENT_REMAP</code>：mremap调用。</li>
+<li><code>UFFD_EVENT_REMOVE</code>：madvise（MADV_REMOVE）和madvise（MADV_DONTNEED）调用。</li>
+<li><code>UFFD_EVENT_UNMAP</code>：munmap调用。</li>
+</ol>
+<p>然后使用控制命令<code>UFFDIO_COPY</code>把数据复制到触发页错误异常的虚拟页，或者使用控制命令<code>UFFDIO_ZERO</code>把虚拟页映射到零页。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">uffdio_copy</span> &#123;</span></span><br><span class="line">     __u64 dst;</span><br><span class="line">     __u64 src;</span><br><span class="line">     __u64 len;</span><br><span class="line"><span class="meta">#<span class="keyword">define</span> UFFDIO_COPY_MODE_DONTWAKE      ((__u64)1&lt;&lt;0)</span></span><br><span class="line">     __u64 mode;</span><br><span class="line">     __s64 copy;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">UserfaultHandler</span><span class="params">(<span class="type">int</span> uffd)</span> &#123;</span><br><span class="line">    uffd_msg msg;</span><br><span class="line">    uffdio_copy uc = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>* data = (<span class="type">unsigned</span> <span class="type">long</span>*)mmap(<span class="literal">NULL</span>, <span class="number">0x1000</span>, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, <span class="number">-1</span>, <span class="number">0</span>);<span class="comment">//创建一块新内存</span></span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">        pollfd pf = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">        pf.fd = uffd;</span><br><span class="line">        pf.events = POLLIN;</span><br><span class="line">        poll(&amp;pf, <span class="number">1</span>, <span class="number">-1</span>);<span class="comment">//监听事件</span></span><br><span class="line">        read(uffd, &amp;msg, <span class="keyword">sizeof</span>(msg));</span><br><span class="line">        <span class="keyword">if</span> (msg.event != UFFD_EVENT_PAGEFAULT) &#123;<span class="comment">//判断是否为页错误异常</span></span><br><span class="line">            <span class="built_in">puts</span>(<span class="string">&quot;Pass one event.&quot;</span>);</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        uc.src = (ULL)data;<span class="comment">//即将复制的源数据</span></span><br><span class="line">        uc.dst = msg.arg.pagefault.address &amp; ~(getpagesize() - <span class="number">1</span>);<span class="comment">//发生错误的虚拟页</span></span><br><span class="line">        uc.len = getpagesize();</span><br><span class="line">        uc.mode = <span class="number">0</span>;</span><br><span class="line">        uc.copy = <span class="number">0</span>;</span><br><span class="line">        ioctl(uffd, UFFDIO_COPY, &amp;uc);</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>在linux-5.11之前，普通用户都可以注册缺页异常处理函数，但在之后限定成仅有特权用户可注册。</p>
+<p>因此在5.11之前的内核，我们可以给一块未映射的内存注册<code>userfaulthandler</code>，然后内核在调用<code>copy_from_user</code>将该内存复制到内核堆空间时就会卡住等待回复。如果此时另一个线程调用内核函数删除该内核堆，并调用其他函数创建新的堆块，再恢复卡住的线程就会造成uaf。</p>
+<h2 id="msg消息队列"><a href="#msg消息队列" class="headerlink" title="msg消息队列"></a>msg消息队列</h2><p>内核进程之间或者用户进程之间以及内核和用户之间进行通信时可以使用msg消息队列进行通信。</p>
+<p>用户可通过<code>msgget</code>获取唯一标识符<code>msgid</code>，通过<code>__key</code>查找对应的msg队列，<code>IPC_PRIVATE</code>表示创建新的<code>msgid</code>，<code>__msgflg</code>为<code>0666|IPC_CREAT</code>表示key有对应的msg队列就返回该队列id，否则创建新的队列并返回id。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">msgget</span> <span class="params">(<span class="type">key_t</span> __key, <span class="type">int</span> __msgflg)</span>;</span><br><span class="line"><span class="type">int</span> msgid = msgget(IPC_PRIVATE, <span class="number">0666</span> | IPC_CREAT);</span><br></pre></td></tr></table></figure></div>
+
+<p>得到<code>msgid</code>后可通过<code>msgsnd</code>发送消息。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">long</span> <span class="title function_">ksys_msgsnd</span><span class="params">(<span class="type">int</span> msqid, <span class="keyword">struct</span> msgbuf __user *msgp, <span class="type">size_t</span> msgsz,</span></span><br><span class="line"><span class="params">		 <span class="type">int</span> msgflg)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">long</span> mtype;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (get_user(mtype, &amp;msgp-&gt;mtype))<span class="comment">//一般mtype为1即可。</span></span><br><span class="line">		<span class="keyword">return</span> -EFAULT;</span><br><span class="line">	<span class="keyword">return</span> do_msgsnd(msqid, mtype, msgp-&gt;mtext, msgsz, msgflg);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>其中<code>msgp</code>表示需要发送的消息，<code>mtype</code>表示类型，<code>mtext</code>为可拓展成员，具体大小自定义。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">msgbuf</span> &#123;</span></span><br><span class="line">	<span class="type">__kernel_long_t</span> mtype;          <span class="comment">/* type of message */</span></span><br><span class="line">	<span class="type">char</span> mtext[<span class="number">1</span>];                  <span class="comment">/* message text */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></div>
+
+<p><code>do_msgsnd</code>关键代码如下</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">long</span> <span class="title function_">do_msgsnd</span><span class="params">(<span class="type">int</span> msqid, <span class="type">long</span> mtype, <span class="type">void</span> __user *mtext,</span></span><br><span class="line"><span class="params">		<span class="type">size_t</span> msgsz, <span class="type">int</span> msgflg)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_queue</span> *<span class="title">msq</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msg</span> *<span class="title">msg</span>;</span></span><br><span class="line">	<span class="type">int</span> err;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">ipc_namespace</span> *<span class="title">ns</span>;</span></span><br><span class="line">	DEFINE_WAKE_Q(wake_q);</span><br><span class="line"></span><br><span class="line">	......</span><br><span class="line"></span><br><span class="line">	msg = load_msg(mtext, msgsz);<span class="comment">//处理用户的msg</span></span><br><span class="line">    msg-&gt;m_type = mtype;</span><br><span class="line">	msg-&gt;m_ts = msgsz;</span><br><span class="line">    ......</span><br><span class="line">    msq = msq_obtain_object_check(ns, msqid);</span><br><span class="line">    ......</span><br><span class="line">    <span class="keyword">if</span> (msgflg &amp; IPC_NOWAIT) &#123;<span class="comment">//IPC_NOWAIT为00004000，一般设置该flag</span></span><br><span class="line">		err = -EAGAIN;</span><br><span class="line">		<span class="keyword">goto</span> out_unlock0;</span><br><span class="line">	&#125;</span><br><span class="line">    ......</span><br><span class="line">   	<span class="keyword">if</span> (!pipelined_send(msq, msg, &amp;wake_q)) &#123;</span><br><span class="line">        <span class="comment">/* no one is waiting for this message, enqueue it */</span></span><br><span class="line">        list_add_tail(&amp;msg-&gt;m_list, &amp;msq-&gt;q_messages);</span><br><span class="line">        msq-&gt;q_cbytes += msgsz;</span><br><span class="line">        msq-&gt;q_qnum++;</span><br><span class="line">        <span class="type">atomic_add</span>(msgsz, &amp;ns-&gt;msg_bytes);</span><br><span class="line">        <span class="type">atomic_inc</span>(&amp;ns-&gt;msg_hdrs);</span><br><span class="line">	&#125;</span><br><span class="line">    ......</span><br><span class="line">    </span><br></pre></td></tr></table></figure></div>
+
+<p>先了解三个结构体，<code>msg_msg</code>和<code> msg_queue</code>以及<code>msg_msgseg</code></p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">msg_queue</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">kern_ipc_perm</span> <span class="title">q_perm</span>;</span></span><br><span class="line">	<span class="type">time64_t</span> q_stime;		<span class="comment">/* last msgsnd time */</span></span><br><span class="line">	<span class="type">time64_t</span> q_rtime;		<span class="comment">/* last msgrcv time */</span></span><br><span class="line">	<span class="type">time64_t</span> q_ctime;		<span class="comment">/* last change time */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> q_cbytes;		<span class="comment">/* current number of bytes on queue */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> q_qnum;		<span class="comment">/* number of messages in queue */</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> q_qbytes;		<span class="comment">/* max number of bytes on queue */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pid</span> *<span class="title">q_lspid</span>;</span>		<span class="comment">/* pid of last msgsnd */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pid</span> *<span class="title">q_lrpid</span>;</span>		<span class="comment">/* last receive pid */</span></span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">q_messages</span>;</span> <span class="comment">//多个msg_msg结构体互链形成的双向链表</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">q_receivers</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">q_senders</span>;</span></span><br><span class="line">&#125; __randomize_layout;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">msg_msg</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">m_list</span>;</span><span class="comment">//双向链表指针</span></span><br><span class="line">	<span class="type">long</span> m_type;<span class="comment">//消息类型，用于消息匹配</span></span><br><span class="line">	<span class="type">size_t</span> m_ts;		<span class="comment">/* message text size */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msgseg</span> *<span class="title">next</span>;</span><span class="comment">//补充的消息内容</span></span><br><span class="line">	<span class="type">void</span> *security;</span><br><span class="line">	<span class="comment">/* the actual message follows immediately */</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">msg_msgseg</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msgseg</span> *<span class="title">next</span>;</span></span><br><span class="line">	<span class="comment">/* the next part of the message follows immediately */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></div>
+
+<p>每个<code>msgid</code>都对应一个<code>msg_queue</code>，<code>msg_queue</code>中存放着<code>msg_msg</code>组成的双向消息链表。</p>
+<p>上述源码中的<code>load_msg</code>便是将用户传入的消息buf处理，生成<code>msg_msg</code>。</p>
+<p>然后将其链入<code>msgid</code>对应的<code>msg_queue-&gt;q_messages</code>。</p>
+<p><code>load_msg</code>源码如下</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> msg_msg *<span class="title function_">load_msg</span><span class="params">(<span class="type">const</span> <span class="type">void</span> __user *src, <span class="type">size_t</span> len)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msg</span> *<span class="title">msg</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msgseg</span> *<span class="title">seg</span>;</span></span><br><span class="line">	<span class="type">int</span> err = -EFAULT;</span><br><span class="line">	<span class="type">size_t</span> alen;</span><br><span class="line"></span><br><span class="line">	msg = alloc_msg(len);<span class="comment">//根据传入的len创建msg</span></span><br><span class="line">	<span class="keyword">if</span> (msg == <span class="literal">NULL</span>)</span><br><span class="line">		<span class="keyword">return</span> ERR_PTR(-ENOMEM);</span><br><span class="line">	<span class="comment">//PAGE_SIZE也可能为0x2000，以实际情况为主</span></span><br><span class="line">	alen = min(len, DATALEN_MSG);<span class="comment">//DATALEN_MSG = ((size_t)PAGE_SIZE-sizeof(struct msg_msg)) = 0x1000-0x30 = 0xfd0</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment">//然后遍历复制用户buf</span></span><br><span class="line">	<span class="keyword">if</span> (copy_from_user(msg + <span class="number">1</span>, src, alen))</span><br><span class="line">		<span class="keyword">goto</span> out_err;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (seg = msg-&gt;next; seg != <span class="literal">NULL</span>; seg = seg-&gt;next) &#123;</span><br><span class="line">		len -= alen;</span><br><span class="line">		src = (<span class="type">char</span> __user *)src + alen;</span><br><span class="line">		alen = min(len, DATALEN_SEG);</span><br><span class="line">		<span class="keyword">if</span> (copy_from_user(seg + <span class="number">1</span>, src, alen))</span><br><span class="line">			<span class="keyword">goto</span> out_err;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	err = security_msg_msg_alloc(msg);</span><br><span class="line">	<span class="keyword">if</span> (err)</span><br><span class="line">		<span class="keyword">goto</span> out_err;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> msg;</span><br></pre></td></tr></table></figure></div>
+
+<p>可见<code>load_msg</code>先调用<code>alloc_msg</code>函数创建<code>msg</code>。</p>
+<p><code>alloc_msg</code>源码如下</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">struct</span> msg_msg *<span class="title function_">alloc_msg</span><span class="params">(<span class="type">size_t</span> len)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msg</span> *<span class="title">msg</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msgseg</span> **<span class="title">pseg</span>;</span></span><br><span class="line">	<span class="type">size_t</span> alen;</span><br><span class="line"></span><br><span class="line">	alen = min(len, DATALEN_MSG);</span><br><span class="line">	msg = kmalloc(<span class="keyword">sizeof</span>(*msg) + alen, GFP_KERNEL_ACCOUNT);<span class="comment">//可以自定义创建0x30-PAGE_SIZE的堆块。</span></span><br><span class="line">	<span class="keyword">if</span> (msg == <span class="literal">NULL</span>)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">	msg-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line">	msg-&gt;security = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">	len -= alen;</span><br><span class="line">	pseg = &amp;msg-&gt;next;</span><br><span class="line">	<span class="keyword">while</span> (len &gt; <span class="number">0</span>) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">msg_msgseg</span> *<span class="title">seg</span>;</span></span><br><span class="line"></span><br><span class="line">		cond_resched();</span><br><span class="line"></span><br><span class="line">		alen = min(len, DATALEN_SEG);</span><br><span class="line">		seg = kmalloc(<span class="keyword">sizeof</span>(*seg) + alen, GFP_KERNEL_ACCOUNT);<span class="comment">//能创建8-PAGE_SIZE的堆块</span></span><br><span class="line">		<span class="keyword">if</span> (seg == <span class="literal">NULL</span>)</span><br><span class="line">			<span class="keyword">goto</span> out_err;</span><br><span class="line">		*pseg = seg;</span><br><span class="line">		seg-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line">		pseg = &amp;seg-&gt;next;</span><br><span class="line">		len -= alen;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> msg;</span><br></pre></td></tr></table></figure></div>
+
+<p>借用lotus的关系图，可知<code>msg_msg</code>和<code>msg_msgseg</code>的关系如下</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/08/03/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97-Hexo-Git%E8%BF%9C%E7%A8%8B%E9%83%A8%E7%BD%B2/tfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/2.png"
+                     
+                ></p>
+<p><code>msg_msg</code>的0x30偏移开始存放用户data。<br>如果<code>msgsz</code>不大于<code>((size_t)PAGE_SIZE-sizeof(struct msg_msg))</code>时，只会创建<code>msg_msg</code>来保存整个消息。</p>
+<p>当<code>msgsz</code>大于<code>((size_t)PAGE_SIZE-sizeof(struct msg_msg))</code>时，便会扩展创建<code>msg_msgseg</code>单向链表来存储多余的数据。</p>
+<p>由上分析可知，我们能利用<code>msgsnd</code>创建8-PAGE_SIZE的堆块。</p>
+<p>然后分析<code>msgrcv</code>函数</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">long</span> <span class="title function_">ksys_msgrcv</span><span class="params">(<span class="type">int</span> msqid, <span class="keyword">struct</span> msgbuf __user *msgp, <span class="type">size_t</span> msgsz,</span></span><br><span class="line"><span class="params">		 <span class="type">long</span> msgtyp, <span class="type">int</span> msgflg)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">return</span> do_msgrcv(msqid, msgp, msgsz, msgtyp, msgflg, do_msg_fill);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p><code>do_msgrcv</code>部分源码</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">long</span> <span class="title function_">do_msgrcv</span><span class="params">(<span class="type">int</span> msqid, <span class="type">void</span> __user *buf, <span class="type">size_t</span> bufsz, <span class="type">long</span> msgtyp, <span class="type">int</span> msgflg,</span></span><br><span class="line"><span class="params">	       <span class="type">long</span> (*msg_handler)(<span class="type">void</span> __user *, <span class="keyword">struct</span> msg_msg *, <span class="type">size_t</span>))</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> mode;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_queue</span> *<span class="title">msq</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">ipc_namespace</span> *<span class="title">ns</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msg</span> *<span class="title">msg</span>, *<span class="title">copy</span> =</span> <span class="literal">NULL</span>;</span><br><span class="line">	......</span><br><span class="line">    <span class="keyword">if</span> (msgflg &amp; MSG_COPY) &#123;</span><br><span class="line">    	<span class="keyword">if</span> ((msgflg &amp; MSG_EXCEPT) || !(msgflg &amp; IPC_NOWAIT))</span><br><span class="line">        	<span class="keyword">return</span> -EINVAL;</span><br><span class="line">    	copy = prepare_copy(buf, <span class="type">min_t</span>(<span class="type">size_t</span>, bufsz, ns-&gt;msg_ctlmax));</span><br><span class="line">    	<span class="keyword">if</span> (IS_ERR(copy))</span><br><span class="line">        	<span class="keyword">return</span> PTR_ERR(copy);</span><br><span class="line">	&#125;</span><br><span class="line">	mode = convert_mode(&amp;msgtyp, msgflg);</span><br><span class="line">    ......</span><br><span class="line">    msq = msq_obtain_object_check(ns, msqid);</span><br><span class="line">    ......</span><br><span class="line">    msg = find_msg(msq, &amp;msgtyp, mode);</span><br><span class="line">    ......</span><br><span class="line">   	<span class="keyword">if</span> (msgflg &amp; MSG_COPY) &#123;</span><br><span class="line">        msg = copy_msg(msg, copy);</span><br><span class="line">        <span class="keyword">goto</span> out_unlock0;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    list_del(&amp;msg-&gt;m_list);</span><br><span class="line">    msq-&gt;q_qnum--;</span><br><span class="line">    msq-&gt;q_rtime = ktime_get_real_seconds();</span><br><span class="line">    ipc_update_pid(&amp;msq-&gt;q_lrpid, task_tgid(current));</span><br><span class="line">    msq-&gt;q_cbytes -= msg-&gt;m_ts;</span><br><span class="line">    <span class="type">atomic_sub</span>(msg-&gt;m_ts, &amp;ns-&gt;msg_bytes);</span><br><span class="line">    <span class="type">atomic_dec</span>(&amp;ns-&gt;msg_hdrs);</span><br><span class="line">    ss_wakeup(msq, &amp;wake_q, <span class="literal">false</span>);</span><br><span class="line">	......</span><br><span class="line">out_unlock0:</span><br><span class="line">	ipc_unlock_object(&amp;msq-&gt;q_perm);</span><br><span class="line">	wake_up_q(&amp;wake_q);</span><br><span class="line">out_unlock1:</span><br><span class="line">	rcu_read_unlock();</span><br><span class="line">	<span class="keyword">if</span> (IS_ERR(msg)) &#123;</span><br><span class="line">		free_copy(copy);</span><br><span class="line">		<span class="keyword">return</span> PTR_ERR(msg);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	bufsz = msg_handler(buf, msg, bufsz);</span><br><span class="line">	free_msg(msg);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> bufsz;</span><br></pre></td></tr></table></figure></div>
+
+<p>msg通过<code>find_msg</code>函数获取</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">struct</span> msg_msg *<span class="title function_">find_msg</span><span class="params">(<span class="keyword">struct</span> msg_queue *msq, <span class="type">long</span> *msgtyp, <span class="type">int</span> mode)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msg</span> *<span class="title">msg</span>, *<span class="title">found</span> =</span> <span class="literal">NULL</span>;</span><br><span class="line">	<span class="type">long</span> count = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	list_for_each_entry(msg, &amp;msq-&gt;q_messages, m_list) &#123;</span><br><span class="line">		<span class="keyword">if</span> (testmsg(msg, *msgtyp, mode) &amp;&amp;</span><br><span class="line">		    !security_msg_queue_msgrcv(&amp;msq-&gt;q_perm, msg, current,</span><br><span class="line">					       *msgtyp, mode)) &#123;</span><br><span class="line">			<span class="keyword">if</span> (mode == SEARCH_LESSEQUAL &amp;&amp; msg-&gt;m_type != <span class="number">1</span>) &#123;</span><br><span class="line">				*msgtyp = msg-&gt;m_type - <span class="number">1</span>;</span><br><span class="line">				found = msg;</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> (mode == SEARCH_NUMBER) &#123;</span><br><span class="line">				<span class="keyword">if</span> (*msgtyp == count)</span><br><span class="line">					<span class="keyword">return</span> msg;</span><br><span class="line">			&#125; <span class="keyword">else</span></span><br><span class="line">				<span class="keyword">return</span> msg;</span><br><span class="line">			count++;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>它会遍历msq-&gt;q_messages双向链表，通过<code>testmsg</code>匹配消息并返回。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">testmsg</span><span class="params">(<span class="keyword">struct</span> msg_msg *msg, <span class="type">long</span> type, <span class="type">int</span> mode)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">switch</span> (mode) &#123;</span><br><span class="line">	<span class="keyword">case</span> SEARCH_ANY:</span><br><span class="line">	<span class="keyword">case</span> SEARCH_NUMBER:</span><br><span class="line">		<span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">	<span class="keyword">case</span> SEARCH_LESSEQUAL:</span><br><span class="line">		<span class="keyword">if</span> (msg-&gt;m_type &lt;= type)</span><br><span class="line">			<span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	<span class="keyword">case</span> SEARCH_EQUAL:</span><br><span class="line">		<span class="keyword">if</span> (msg-&gt;m_type == type)</span><br><span class="line">			<span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	<span class="keyword">case</span> SEARCH_NOTEQUAL:</span><br><span class="line">		<span class="keyword">if</span> (msg-&gt;m_type != type)</span><br><span class="line">			<span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p><code>testmsg</code>根据<code>mode</code>选择筛选模式，然后根据<code>type</code>找到指定消息，如果<code>mode</code>为<code>SEARCH_NUMBER</code>就会直接从首链取出msg。</p>
+<p><code>mode</code>由<code>convert_mode</code>得到</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">int</span> <span class="title function_">convert_mode</span><span class="params">(<span class="type">long</span> *msgtyp, <span class="type">int</span> msgflg)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (msgflg &amp; MSG_COPY)</span><br><span class="line">		<span class="keyword">return</span> SEARCH_NUMBER;</span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 *  find message of correct type.</span></span><br><span class="line"><span class="comment">	 *  msgtyp = 0 =&gt; get first.</span></span><br><span class="line"><span class="comment">	 *  msgtyp &gt; 0 =&gt; get first message of matching type.</span></span><br><span class="line"><span class="comment">	 *  msgtyp &lt; 0 =&gt; get message with least type must be &lt; abs(msgtype).</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (*msgtyp == <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">return</span> SEARCH_ANY;</span><br><span class="line">	<span class="keyword">if</span> (*msgtyp &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		<span class="keyword">if</span> (*msgtyp == LONG_MIN) <span class="comment">/* -LONG_MIN is undefined */</span></span><br><span class="line">			*msgtyp = LONG_MAX;</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">			*msgtyp = -*msgtyp;</span><br><span class="line">		<span class="keyword">return</span> SEARCH_LESSEQUAL;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> (msgflg &amp; MSG_EXCEPT)</span><br><span class="line">		<span class="keyword">return</span> SEARCH_NOTEQUAL;</span><br><span class="line">	<span class="keyword">return</span> SEARCH_EQUAL;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>当<code>msgflg</code>为<code>MSG_COPY</code>时，<code>mode</code>为<code>SEARCH_NUMBER</code>。</p>
+<p>此时会从消息链表中取出第一个msg（此时还不会将其从链中删除）。</p>
+<p>并且<code>prepare_copy</code>会创建一个消息副本，并把取出的msg复制到副本中并返回，然后直接跳转到<code>out_unlock0</code>而非调用<code>list_del</code>将msg从链中删除。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (msgflg &amp; MSG_COPY) &#123;</span><br><span class="line">    msg = copy_msg(msg, copy);</span><br><span class="line">    <span class="keyword">goto</span> out_unlock0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> msg_msg *<span class="title function_">copy_msg</span><span class="params">(<span class="keyword">struct</span> msg_msg *src, <span class="keyword">struct</span> msg_msg *dst)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">msg_msgseg</span> *<span class="title">dst_pseg</span>, *<span class="title">src_pseg</span>;</span></span><br><span class="line">	<span class="type">size_t</span> len = src-&gt;m_ts;</span><br><span class="line">	<span class="type">size_t</span> alen;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (src-&gt;m_ts &gt; dst-&gt;m_ts)<span class="comment">//m_ts表示着消息内容大小</span></span><br><span class="line">		<span class="keyword">return</span> ERR_PTR(-EINVAL);</span><br><span class="line"></span><br><span class="line">	alen = min(len, DATALEN_MSG);</span><br><span class="line">	<span class="built_in">memcpy</span>(dst + <span class="number">1</span>, src + <span class="number">1</span>, alen);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (dst_pseg = dst-&gt;next, src_pseg = src-&gt;next;</span><br><span class="line">	     src_pseg != <span class="literal">NULL</span>;</span><br><span class="line">	     dst_pseg = dst_pseg-&gt;next, src_pseg = src_pseg-&gt;next) &#123;</span><br><span class="line"></span><br><span class="line">		len -= alen;</span><br><span class="line">		alen = min(len, DATALEN_SEG);</span><br><span class="line">		<span class="built_in">memcpy</span>(dst_pseg + <span class="number">1</span>, src_pseg + <span class="number">1</span>, alen);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	dst-&gt;m_type = src-&gt;m_type;</span><br><span class="line">	dst-&gt;m_ts = src-&gt;m_ts;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> dst;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>由上可知，当<code>msgflg</code>满足<code>MSG_COPY</code>时，会直接将第一个消息复制一份并返回。</p>
+<p>了解了<code>msgget</code>、<code>msgsnd</code>、<code>msgrcv</code>后，我们可以将其与<code>userfaultfd</code>结合辅助实现uaf。</p>
+<p>流程如下：</p>
+<ol>
+<li>调用RegisterUserfault为一个未映射的内存设置缺页异常处理函数。</li>
+<li>add一个内核堆块。</li>
+<li>创建一个线程函数UAF，等待信号1然后delete该内核堆块。</li>
+<li>edit调用copy_from_user将未映射区作为参数。</li>
+<li>此时主线程断住，handler线程接收事件并进行操作。</li>
+<li>handler线程发送信号1并等待信号2，UAF线程接到信号删除该堆块，并调用msgsnd创建一样大小的堆块，再发送信号2。</li>
+<li>handler接收信号2，继续修改该内核堆块，此时该堆块和msg的堆块属于同一个堆块，所以我们可以修改msg的m_ts变大。</li>
+<li>msgrcv接收消息，可实现越界读。</li>
+</ol>
+<h2 id="pipe-buffer结构体利用"><a href="#pipe-buffer结构体利用" class="headerlink" title="pipe_buffer结构体利用"></a>pipe_buffer结构体利用</h2><p>用户进程可通过<code>pipe</code>函数创建管道，其中<code>pipedes</code>数组用与接收<code>read</code>和<code>write</code>的管道描述符。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">pipe</span> <span class="params">(<span class="type">int</span> __pipedes[<span class="number">2</span>])</span>;</span><br></pre></td></tr></table></figure></div>
+
+<p>其中<code>pipe</code>有如下一条调用链：</p>
+<p>pipe-&gt;do_pipe2-&gt;__do_pipe_flags-&gt;create_pipe_files-&gt;get_pipe_inode-&gt;alloc_pipe_info</p>
+<p>其中<code>alloc_pipe_info</code>函数部分代码如下：</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> pipe_inode_info *<span class="title function_">alloc_pipe_info</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pipe_inode_info</span> *<span class="title">pipe</span>;</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> pipe_bufs = PIPE_DEF_BUFFERS;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">user_struct</span> *<span class="title">user</span> =</span> get_current_user();</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> user_bufs;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> max_size = READ_ONCE(pipe_max_size);</span><br><span class="line"></span><br><span class="line">	pipe = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> pipe_inode_info), GFP_KERNEL_ACCOUNT);</span><br><span class="line">	......</span><br><span class="line"></span><br><span class="line">	pipe-&gt;bufs = kcalloc(pipe_bufs, <span class="keyword">sizeof</span>(<span class="keyword">struct</span> pipe_buffer),</span><br><span class="line">			     GFP_KERNEL_ACCOUNT);</span><br><span class="line">	......</span><br></pre></td></tr></table></figure></div>
+
+<p>​	</p>
+<p>其中<code>sizeof(struct pipe_inode_info)</code>大小为80，<code>sizeof(struct pipe_buffer)</code>为0x28，</p>
+<p><code>PIPE_DEF_BUFFERS</code>为0x10。</p>
+<p>所以<code>kcalloc(pipe_bufs, sizeof(struct pipe_buffer),GFP_KERNEL_ACCOUNT);</code>会创建0x400的堆块（实际使用0x28*0x10 &#x3D; 0x280)，即12个<code>pipe_buffer</code>形成的环形队列。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/08/03/%E4%B8%AA%E4%BA%BA%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E6%8C%87%E5%8D%97-Hexo-Git%E8%BF%9C%E7%A8%8B%E9%83%A8%E7%BD%B2/tfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/3.png"
+                     
+                ></p>
+<p><code>pipe_buffer</code>结构体如下</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">pipe_buffer</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">page</span> *<span class="title">page</span>;</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> offset, len;</span><br><span class="line">	<span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">pipe_buf_operations</span> *<span class="title">ops</span>;</span><span class="comment">//利用点</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> flags;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> private;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></div>
+
+<p>可以看到<code>pipe_buffer</code>带有一个<code>ops</code>。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">pipe_buf_operations</span> &#123;</span></span><br><span class="line">	<span class="type">int</span> (*confirm)(<span class="keyword">struct</span> pipe_inode_info *, <span class="keyword">struct</span> pipe_buffer *);</span><br><span class="line">	<span class="type">void</span> (*release)(<span class="keyword">struct</span> pipe_inode_info *, <span class="keyword">struct</span> pipe_buffer *);</span><br><span class="line">	<span class="type">bool</span> (*try_steal)(<span class="keyword">struct</span> pipe_inode_info *, <span class="keyword">struct</span> pipe_buffer *);</span><br><span class="line">	<span class="type">bool</span> (*get)(<span class="keyword">struct</span> pipe_inode_info *, <span class="keyword">struct</span> pipe_buffer *);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></div>
+
+<p>当我们调用<code>write</code>或者<code>read</code>往<code>pipe</code>中写入或者读取内容，会调用<code>file-&gt;fop</code>指向的函数表中的函数，</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">pipefifo_fops</span> =</span> &#123;</span><br><span class="line">	.open		= fifo_open,</span><br><span class="line">	.llseek		= no_llseek,</span><br><span class="line">	.read_iter	= pipe_read,</span><br><span class="line">	.write_iter	= pipe_write,</span><br><span class="line">	.poll		= pipe_poll,</span><br><span class="line">	.unlocked_ioctl	= pipe_ioctl,</span><br><span class="line">	.release	= pipe_release,</span><br><span class="line">	.fasync		= pipe_fasync,</span><br><span class="line">&#125;;</span><br><span class="line">f = alloc_file_pseudo(inode, pipe_mnt, <span class="string">&quot;&quot;</span>,</span><br><span class="line">            O_WRONLY | (flags &amp; (O_NONBLOCK | O_DIRECT)),</span><br><span class="line">            &amp;pipefifo_fops);</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure></div>
+
+<p>可以看到<code>write</code>会调用<code>pipe_write</code>进行处理</p>
+<p><code>pipe_write</code>部分源码如下</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">ssize_t</span></span><br><span class="line"><span class="title function_">pipe_write</span><span class="params">(<span class="keyword">struct</span> kiocb *iocb, <span class="keyword">struct</span> iov_iter *from)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">file</span> *<span class="title">filp</span> =</span> iocb-&gt;ki_filp;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pipe_inode_info</span> *<span class="title">pipe</span> =</span> filp-&gt;private_data;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> head;</span><br><span class="line">	<span class="type">ssize_t</span> ret = <span class="number">0</span>;</span><br><span class="line">	<span class="type">size_t</span> total_len = iov_iter_count(from);</span><br><span class="line">	<span class="type">ssize_t</span> chars;</span><br><span class="line">	<span class="type">bool</span> was_empty = <span class="literal">false</span>;</span><br><span class="line">	<span class="type">bool</span> wake_next_writer = <span class="literal">false</span>;</span><br><span class="line">    ......</span><br><span class="line">    head = pipe-&gt;head;</span><br><span class="line">	was_empty = pipe_empty(head, pipe-&gt;tail);</span><br><span class="line">	chars = total_len &amp; (PAGE_SIZE<span class="number">-1</span>);</span><br><span class="line">	<span class="keyword">if</span> (chars &amp;&amp; !was_empty) &#123;</span><br><span class="line">		<span class="type">unsigned</span> <span class="type">int</span> mask = pipe-&gt;ring_size - <span class="number">1</span>;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">pipe_buffer</span> *<span class="title">buf</span> =</span> &amp;pipe-&gt;bufs[(head - <span class="number">1</span>) &amp; mask];</span><br><span class="line">		<span class="type">int</span> offset = buf-&gt;offset + buf-&gt;len;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> ((buf-&gt;flags &amp; PIPE_BUF_FLAG_CAN_MERGE) &amp;&amp;</span><br><span class="line">		    offset + chars &lt;= PAGE_SIZE) &#123;</span><br><span class="line">			ret = pipe_buf_confirm(pipe, buf);</span><br></pre></td></tr></table></figure></div>
+
+<p>可以看到调用<code>write</code>会取出<code>pipe_buffer</code>队列中的第一个<code>pipe_buffer</code>然后判断其<code>flags</code>和<code>offset</code>是否满足条件，满足则调用<code>pipe_buf_confirm</code>转而调用<code>buf-&gt;ops-&gt;confirm</code>。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">int</span> <span class="title function_">pipe_buf_confirm</span><span class="params">(<span class="keyword">struct</span> pipe_inode_info *pipe,</span></span><br><span class="line"><span class="params">				   <span class="keyword">struct</span> pipe_buffer *buf)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (!buf-&gt;ops-&gt;confirm)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	<span class="keyword">return</span> buf-&gt;ops-&gt;confirm(pipe, buf);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+<p>所以我们可以劫持<code>pipe_buffer</code>的<code>ops</code>实现rip劫持，其中rsi为pipe_buffer的堆地址，可供后续magic_gadget利用。</p>
+
+        </div>
+
+        
+            <div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+                <div class="article-copyright-info-container">
+    <ul>
+        <li><strong>Title:</strong> KernelPwn之堆利用(userfaultfd+msg消息队列+pipebuffer)</li>
+        <li><strong>Author:</strong> 0rb1t</li>
+        <li><strong>Created at
+                :</strong> 2024-08-09 13:19:16</li>
+        
+            <li>
+                <strong>Updated at
+                    :</strong> 2024-08-09 19:08:11
+            </li>
+        
+        <li>
+            <strong>Link:</strong> https://redefine.ohevan.com/2024/08/09/KernelPwn之堆利用-userfaultfd-msg消息队列-pipebuffer/
+        </li>
+        <li>
+            <strong>
+                License:
+            </strong>
+            
+
+            
+                This work is licensed under <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a>.
+            
+        </li>
+    </ul>
+</div>
+
+            </div>
+        
+
+        
+            <ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+                
+                    <li class="tag-item mx-0.5">
+                        <a href="/tags/KernelPwn/">#KernelPwn</a>&nbsp;
+                    </li>
+                
+            </ul>
+        
+
+        
+
+        
+            <div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+                
+                
+                    <div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+                        <a class="next"
+                        rel="next"
+                        href="/2024/08/05/KernelPwn%E4%B9%8B%E6%A0%88%E6%BA%A2%E5%87%BA%E5%88%A9%E7%94%A8/"
+                        >
+                            <span class="title flex justify-center items-center">
+                                <span class="post-nav-title-item">KernelPwn之栈溢出利用</span>
+                                <span class="post-nav-item">Next posts</span>
+                            </span>
+                            <span class="right arrow-icon flex justify-center items-center">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </span>
+                        </a>
+                    </div>
+                
+            </div>
+        
+
+
+        
+            <div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+                <div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        Comments
+    </div>
+    
+
+        
+            
+    <div id="waline"></div>
+    <script type="module" data-swup-reload-script>
+      import { init } from '/js/libs/waline.mjs';
+
+      function loadWaline() {
+        init({
+          el: '#waline',
+          serverURL: 'https://example.example.com',
+          lang: 'zh-CN',
+          dark: 'body[class~="dark-mode"]',
+          reaction: false,
+          requiredMeta: ['nick', 'mail'],
+          emoji: [],
+          recaptchaV3Key: "wasd",
+          
+        });
+      }
+
+      if (typeof swup !== 'undefined') {
+        loadWaline();
+      } else {
+        window.addEventListener('DOMContentLoaded', loadWaline);
+      }
+    </script>
+
+
+
+        
+    
+</div>
+
+            </div>
+        
+    </div>
+
+    
+        <div class="toc-content-container">
+            <div class="post-toc-wrap">
+    <div class="post-toc">
+        <div class="toc-title">On this page</div>
+        <div class="page-title">KernelPwn之堆利用(userfaultfd+msg消息队列+pipebuffer)</div>
+        <ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E7%BD%AE%E7%9F%A5%E8%AF%86"><span class="nav-text">前置知识</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Userfaultfd%E6%9C%BA%E5%88%B6"><span class="nav-text">Userfaultfd机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97"><span class="nav-text">msg消息队列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#pipe-buffer%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%A9%E7%94%A8"><span class="nav-text">pipe_buffer结构体利用</span></a></li></ol>
+
+    </div>
+</div>
+        </div>
+    
+</div>
+
+
+
+                
+
+            </div>
+
+            
+
+        </div>
+
+        <div class="main-content-footer">
+            <footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2024</span>
+              -
+            
+            2024&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">0rb1t</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        3 posts in total
+                    </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">VISITOR COUNT</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">TOTAL PAGE VIEWS</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">POWERED BY <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a></span>
+            <span class="text-sm lg:block">THEME&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.6.4</a></span>
+        </div>
+        
+        
+            <div>
+                Blog up for <span class="odometer" id="runtime_days" ></span> days <span class="odometer" id="runtime_hours"></span> hrs <span class="odometer" id="runtime_minutes"></span> Min <span class="odometer" id="runtime_seconds"></span> Sec
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+        </div>
+    </div>
+
+    
+        <div class="post-tools">
+            <div class="post-tools-container">
+    <ul class="article-tools-list">
+        <!-- TOC aside toggle -->
+        
+            <li class="right-bottom-tools page-aside-toggle">
+                <i class="fa-regular fa-outdent"></i>
+            </li>
+        
+
+        <!-- go comment -->
+        
+            <li class="go-comment">
+                <i class="fa-regular fa-comments"></i>
+            </li>
+        
+    </ul>
+</div>
+
+        </div>
+    
+
+    <div class="right-side-tools-container">
+        <div class="side-tools-container">
+    <ul class="hidden-tools-list">
+        <li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+            <i class="fa-regular fa-magnifying-glass-plus"></i>
+        </li>
+
+        <li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+            <i class="fa-regular fa-magnifying-glass-minus"></i>
+        </li>
+
+        <li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+            <i class="fa-regular fa-moon"></i>
+        </li>
+
+        <!-- rss -->
+        
+
+        
+
+        <li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+            <i class="fa-regular fa-arrow-down"></i>
+        </li>
+    </ul>
+
+    <ul class="visible-tools-list">
+        <li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+            <i class="fa-regular fa-cog fa-spin"></i>
+        </li>
+        
+            <li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+                <i class="arrow-up fas fa-arrow-up"></i>
+                <span class="percent"></span>
+            </li>
+        
+        
+    </ul>
+</div>
+
+    </div>
+
+    <div class="image-viewer-container">
+    <img src="">
+</div>
+
+
+    
+
+</main>
+
+
+    
+<script src="/js/libs/Swup.min.js"></script>
+
+<script src="/js/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    const swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+</script>
+
+
+
+
+
+
+
+<script src="/js/tools/imageViewer.js" type="module"></script>
+
+<script src="/js/utils.js" type="module"></script>
+
+<script src="/js/main.js" type="module"></script>
+
+<script src="/js/layouts/navbarShrink.js" type="module"></script>
+
+<script src="/js/tools/scrollTopBottom.js" type="module"></script>
+
+<script src="/js/tools/lightDarkSwitch.js" type="module"></script>
+
+<script src="/js/layouts/categoryList.js" type="module"></script>
+
+
+
+
+
+    
+<script src="/js/tools/codeBlock.js" type="module"></script>
+
+
+
+
+    
+<script src="/js/layouts/lazyload.js" type="module"></script>
+
+
+
+
+    
+<script src="/js/tools/runtime.js"></script>
+
+    
+<script src="/js/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+  
+<script src="/js/libs/Typed.min.js"></script>
+
+  
+<script src="/js/plugins/typed.js" type="module"></script>
+
+
+
+
+
+
+
+
+
+<div class="post-scripts" data-swup-reload-script>
+    
+        
+<script src="/js/tools/tocToggle.js" type="module"></script>
+
+<script src="/js/layouts/toc.js" type="module"></script>
+
+<script src="/js/plugins/tabs.js" type="module"></script>
+
+    
+</div>
+
+
+</body>
+</html>

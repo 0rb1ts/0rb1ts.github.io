@@ -18,19 +18,19 @@
     <meta name="googlebot" content="index,follow">
     <meta name="revisit-after" content="1 days">
     
-        <meta name="description" content="内核提权方式内核提权有三种方式。 1.调用prepare_kernel_cred&amp;&amp;commit_creds提权12struct cred *prepare_kernel_cred(struct task_struct *daemon);int commit_creds(struct cred *new);  其中prepare_kernel_cred函数的作用是向内核申请凭证，c">
+        <meta name="description" content="[TOC] 内核提权方式内核提权有三种方式。 1.调用prepare_kernel_cred&amp;&amp;commit_creds提权12struct cred *prepare_kernel_cred(struct task_struct *daemon);int commit_creds(struct cred *new);  其中prepare_kernel_cred函数的作用是向内核">
 <meta property="og:type" content="article">
 <meta property="og:title" content="KernelPwn之栈溢出利用">
 <meta property="og:url" content="http://example.com/2024/08/05/KernelPwn%E4%B9%8B%E6%A0%88%E6%BA%A2%E5%87%BA%E5%88%A9%E7%94%A8/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="内核提权方式内核提权有三种方式。 1.调用prepare_kernel_cred&amp;&amp;commit_creds提权12struct cred *prepare_kernel_cred(struct task_struct *daemon);int commit_creds(struct cred *new);  其中prepare_kernel_cred函数的作用是向内核申请凭证，c">
+<meta property="og:description" content="[TOC] 内核提权方式内核提权有三种方式。 1.调用prepare_kernel_cred&amp;&amp;commit_creds提权12struct cred *prepare_kernel_cred(struct task_struct *daemon);int commit_creds(struct cred *new);  其中prepare_kernel_cred函数的作用是向内核">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="http://example.com/2024/08/05/KernelPwn%E4%B9%8B%E6%A0%88%E6%BA%A2%E5%87%BA%E5%88%A9%E7%94%A8/1.png">
 <meta property="og:image" content="http://example.com/2024/08/05/KernelPwn%E4%B9%8B%E6%A0%88%E6%BA%A2%E5%87%BA%E5%88%A9%E7%94%A8/2.png">
 <meta property="og:image" content="http://example.com/2024/08/05/KernelPwn%E4%B9%8B%E6%A0%88%E6%BA%A2%E5%87%BA%E5%88%A9%E7%94%A8/3.png">
 <meta property="og:image" content="http://example.com/2024/08/05/KernelPwn%E4%B9%8B%E6%A0%88%E6%BA%A2%E5%87%BA%E5%88%A9%E7%94%A8/4.png">
 <meta property="article:published_time" content="2024-08-05T13:42:17.000Z">
-<meta property="article:modified_time" content="2024-08-05T16:57:05.186Z">
+<meta property="article:modified_time" content="2024-08-09T07:55:54.991Z">
 <meta property="article:author" content="John Doe">
 <meta property="article:tag" content="KernelPwn">
 <meta name="twitter:card" content="summary">
@@ -366,7 +366,7 @@
         <div class="label text-third-text-color text-sm">Categories</div>
     </a>
     <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
-        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">2</div>
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">3</div>
         <div class="label text-third-text-color text-sm">Posts</div>
     </a>
 </div>
@@ -420,8 +420,8 @@
     
         <span class="article-date article-meta-item">
             <i class="fa-regular fa-wrench"></i>&nbsp;
-            <span class="desktop">2024-08-06 00:57:05</span>
-            <span class="mobile">2024-08-06 00:57:05</span>
+            <span class="desktop">2024-08-09 15:55:54</span>
+            <span class="mobile">2024-08-09 15:55:54</span>
             <span class="hover-info">Updated</span>
         </span>
     
@@ -475,7 +475,8 @@
 
 
         <div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
-            <h2 id="内核提权方式"><a href="#内核提权方式" class="headerlink" title="内核提权方式"></a>内核提权方式</h2><p>内核提权有三种方式。</p>
+            <p>[TOC]</p>
+<h2 id="内核提权方式"><a href="#内核提权方式" class="headerlink" title="内核提权方式"></a>内核提权方式</h2><p>内核提权有三种方式。</p>
 <h4 id="1-调用prepare-kernel-cred-commit-creds提权"><a href="#1-调用prepare-kernel-cred-commit-creds提权" class="headerlink" title="1.调用prepare_kernel_cred&amp;&amp;commit_creds提权"></a>1.调用prepare_kernel_cred&amp;&amp;commit_creds提权</h4><div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> cred *<span class="title function_">prepare_kernel_cred</span><span class="params">(<span class="keyword">struct</span> task_struct *daemon)</span>;</span><br><span class="line"><span class="type">int</span> <span class="title function_">commit_creds</span><span class="params">(<span class="keyword">struct</span> cred *new)</span>;</span><br></pre></td></tr></table></figure></div>
 
 <p>其中<code>prepare_kernel_cred</code>函数的作用是向内核申请凭证，<code>commit_creds</code>则是设置指定凭证为当前进程的用户凭证。</p>
@@ -491,8 +492,11 @@
 <p>在有无限任意地址读写的情况下，我们可以通过设置程序名称为特殊值，然后去搜索内核堆空间找到<code>task_struct</code>结构体的位置，然后泄露<code>cred</code>地址，最终修改<code>cred</code>提权。</p>
 <h4 id="3-劫持modprobe-path提权。"><a href="#3-劫持modprobe-path提权。" class="headerlink" title="3.劫持modprobe_path提权。"></a>3.劫持modprobe_path提权。</h4><p>当我们在执行一个非法文件时，系统会以root权限去执行<code>modprobe_path</code>所指向的文件，而<code>modprobe_path</code>存放在内核的可写空间中，所以我们只需要修改<code>modprobe_path</code>即可提权。</p>
 <p>查找<code>modprobe_path</code>有两种方法</p>
-<h5 id="1-执行cat-proc-kallsyms-grep-modprobe-path得到其地址"><a href="#1-执行cat-proc-kallsyms-grep-modprobe-path得到其地址" class="headerlink" title="1.执行cat &#x2F;proc&#x2F;kallsyms | grep modprobe_path得到其地址"></a>1.执行cat &#x2F;proc&#x2F;kallsyms | grep modprobe_path得到其地址</h5><p>但有的内核并不一定会显示该地址。</p>
-<h5 id="2-通过gdb调试跟踪函数-request-module，找到其取出modprobe-path的位置，得到其地址。"><a href="#2-通过gdb调试跟踪函数-request-module，找到其取出modprobe-path的位置，得到其地址。" class="headerlink" title="2.通过gdb调试跟踪函数__request_module，找到其取出modprobe_path的位置，得到其地址。"></a>2.通过gdb调试跟踪函数__request_module，找到其取出modprobe_path的位置，得到其地址。</h5><p><img  
+<ul>
+<li><h5 id="执行cat-proc-kallsyms-grep-modprobe-path得到其地址"><a href="#执行cat-proc-kallsyms-grep-modprobe-path得到其地址" class="headerlink" title="执行cat &#x2F;proc&#x2F;kallsyms | grep modprobe_path得到其地址"></a>执行cat &#x2F;proc&#x2F;kallsyms | grep modprobe_path得到其地址</h5></li>
+<li><h5 id="通过gdb调试跟踪函数-request-module，找到其取出modprobe-path的位置，得到其地址。"><a href="#通过gdb调试跟踪函数-request-module，找到其取出modprobe-path的位置，得到其地址。" class="headerlink" title="通过gdb调试跟踪函数__request_module，找到其取出modprobe_path的位置，得到其地址。"></a>通过gdb调试跟踪函数__request_module，找到其取出modprobe_path的位置，得到其地址。</h5></li>
+</ul>
+<p><img  
                      lazyload
                      src="/images/loading.svg"
                      data-src="/2024/08/05/KernelPwn%E4%B9%8B%E6%A0%88%E6%BA%A2%E5%87%BA%E5%88%A9%E7%94%A8/1.png"
@@ -578,7 +582,7 @@
         
             <li>
                 <strong>Updated at
-                    :</strong> 2024-08-06 00:57:05
+                    :</strong> 2024-08-09 15:55:54
             </li>
         
         <li>
@@ -614,6 +618,21 @@
 
         
             <div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+                
+                    <div class="article-prev border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+                        <a class="prev"
+                        rel="prev"
+                        href="/2024/08/09/KernelPwn%E4%B9%8B%E5%A0%86%E5%88%A9%E7%94%A8-userfaultfd-msg%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97-pipebuffer/"
+                        >
+                            <span class="left arrow-icon flex justify-center items-center">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </span>
+                            <span class="title flex justify-center items-center">
+                                <span class="post-nav-title-item">KernelPwn之堆利用(userfaultfd+msg消息队列+pipebuffer)</span>
+                                <span class="post-nav-item">Prev posts</span>
+                            </span>
+                        </a>
+                    </div>
                 
                 
                     <div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
@@ -720,7 +739,7 @@
                 
                 <p class="post-count space-x-0.5">
                     <span>
-                        2 posts in total
+                        3 posts in total
                     </span>
                     
                 </p>
