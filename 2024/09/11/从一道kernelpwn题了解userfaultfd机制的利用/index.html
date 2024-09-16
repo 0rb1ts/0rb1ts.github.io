@@ -33,12 +33,12 @@
 <meta property="og:image" content="http://example.com/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/6.png">
 <meta property="og:image" content="http://example.com/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/7.png">
 <meta property="og:image" content="http://example.com/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/8.png">
-<meta property="og:image" content="http://example.com/9.png">
-<meta property="og:image" content="http://example.com/10.png">
-<meta property="og:image" content="http://example.com/11.png">
-<meta property="og:image" content="http://example.com/12.png">
+<meta property="og:image" content="http://example.com/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/9.png">
+<meta property="og:image" content="http://example.com/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/10.png">
+<meta property="og:image" content="http://example.com/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/11.png">
+<meta property="og:image" content="http://example.com/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/12.png">
 <meta property="article:published_time" content="2024-09-11T11:33:05.000Z">
-<meta property="article:modified_time" content="2024-09-16T14:39:31.477Z">
+<meta property="article:modified_time" content="2024-09-16T14:41:40.214Z">
 <meta property="article:author" content="John Doe">
 <meta property="article:tag" content="KernelPwn">
 <meta name="twitter:card" content="summary">
@@ -428,8 +428,8 @@
     
         <span class="article-date article-meta-item">
             <i class="fa-regular fa-wrench"></i>&nbsp;
-            <span class="desktop">2024-09-16 22:39:31</span>
-            <span class="mobile">2024-09-16 22:39:31</span>
+            <span class="desktop">2024-09-16 22:41:40</span>
+            <span class="mobile">2024-09-16 22:41:40</span>
             <span class="hover-info">Updated</span>
         </span>
     
@@ -558,13 +558,13 @@
 <p><img  
                      lazyload
                      src="/images/loading.svg"
-                     data-src="/9.png"
+                     data-src="/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/9.png"
                       alt="aaw"
                 ></p>
 <p><img  
                      lazyload
                      src="/images/loading.svg"
-                     data-src="/10.png"
+                     data-src="/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/10.png"
                       alt="aar"
                 ></p>
 <p>利用这两个gadget我们就可以通过控制rdx即ioctl的第三个参数，实现任意地址读和任意地址写入0.</p>
@@ -574,14 +574,14 @@
 <p><img  
                      lazyload
                      src="/images/loading.svg"
-                     data-src="/11.png"
+                     data-src="/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/11.png"
                       alt="task_struct"
                 ></p>
 <p>可以看到comm成员上面便是cred成员，这便是我们要修改的用户凭证。</p>
 <p><img  
                      lazyload
                      src="/images/loading.svg"
-                     data-src="/12.png"
+                     data-src="/2024/09/11/%E4%BB%8E%E4%B8%80%E9%81%93kernelpwn%E9%A2%98%E4%BA%86%E8%A7%A3userfaultfd%E6%9C%BA%E5%88%B6%E7%9A%84%E5%88%A9%E7%94%A8/12.png"
                       alt="image-20240916223746481"
                 ></p>
 <p>可以看到，我们只需要往cred结构体中写入0将uid，gid…都给淹没成0，即可成功提权。</p>
@@ -601,7 +601,7 @@
         
             <li>
                 <strong>Updated at
-                    :</strong> 2024-09-16 22:39:31
+                    :</strong> 2024-09-16 22:41:40
             </li>
         
         <li>
