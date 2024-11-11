@@ -556,7 +556,12 @@ safenote_ioctl存在add、delete、uaf_delete三个功...
 
                     <div class="home-article-content markdown-body">
                         
-                            题目分析
+                            0x01.题目分析ker_ioctl具有add、delete、edit三个功能点，分别对应0x20、0x30、0x50
+add允许申请0x28（实际0x40）大小的堆块，并可写入数据。
+
+delete机会只有2次，且不会清空指针，造成uaf漏洞。
+
+...
                         
                     </div>
 
